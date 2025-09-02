@@ -32,7 +32,10 @@ option(ENABLE_WARNINGS "Enable extra warnings" ON)
 
 if (ENABLE_WARNINGS)
     if (MSVC)
-        target_compile_options(${PROJECT_NAME} PRIVATE /w4 /permissive-)
+        target_compile_options(${PROJECT_NAME} PRIVATE 
+        /w4 
+        /permissive-
+    )
     else()
         target_compile_options(${PROJECT_NAME} PRIVATE
             -Wall -Wpedantic -Wextra  
