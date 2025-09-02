@@ -28,12 +28,12 @@ configure_file(
     @ONLY
 )
 
-option(ENABLE_WARNINGS "Enable extra warnings" ON)
+option(ENABLE_WARNINGS "Enable extra warnings" OFF)
 
 if (ENABLE_WARNINGS)
     if (MSVC)
-        target_compile_options(${PROJECT_NAME} PRIVATE 
-        /w4 
+        target_compile_options(${PROJECT_NAME} PRIVATE
+        /W4
         /permissive-
     )
     else()
