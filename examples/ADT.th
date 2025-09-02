@@ -1,0 +1,18 @@
+use std.io
+
+type Option[T] =
+    | None
+    | Some(T)
+
+let safe_div(x: Int, y: Int) -> Option[Int] =
+    match y == 0 {
+        | True -> None
+        | False -> Some(x / y)
+    }
+
+let main() -> Nil =
+    let result = safe_div(10, 2)
+    match result {
+        | None -> io.errorln("Division by zero")
+        | Some(v) -> io.println(v)
+    }
