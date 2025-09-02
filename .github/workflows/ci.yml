@@ -32,6 +32,8 @@ jobs:
         run: |
           iex "& {$(irm get.scoop.sh)} -RunAsAdmin"
           scoop install winflexbison
+          New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\scoop\shims\flex.exe" -Target "$env:USERPROFILE\scoop\apps\winflexbison\current\win_flex.exe" -Force
+          New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\scoop\shims\bison.exe" -Target "$env:USERPROFILE\scoop\apps\winflexbison\current\win_bison.exe" -Force
 
       - name: Setup CMake
         uses: lukka/get-cmake@latest
