@@ -1,0 +1,3 @@
+#pragma once
+
+#define THALE_VERSION "@PROJECT_VERSION@"

@@ -1,4 +1,0 @@
-use std.io
-
-let main() -> Nil =
-    io.println("Hello, World!")

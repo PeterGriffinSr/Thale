@@ -1,0 +1,15 @@
+# === System-genetated files ===
+Thumbs.db
+.DS_Store
+
+# === Editor & IDE files ===
+*~
+*#
+*.swp
+#*#
+
+# === Build system caches ===
+.cache/
+.deps/
+.vscode/
+build/
