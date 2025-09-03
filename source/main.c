@@ -4,6 +4,7 @@
 #include "ast.h"
 
 extern ASTNode *root;
+extern int yyparse(void);
 extern int yylex_destroy();
 extern FILE *yyin;
 
