@@ -4,27 +4,27 @@ type Option[T] =
     | None
     | Some(T)
 
-let safe_div(x: Int, y: Int) -> Option[Int] =
+safe_div(x: Int, y: Int) -> Option[Int] =
     match y == 0 {
         | True -> None
         | False -> Some(x / y)
     }
 
-let calculate(op: Char, a: Int, b: Int) -> Nil =
+calculate(op: Char, a: Int, b: Int) -> Nil =
     match op {
         | '+' -> io.println(a + b)
         | '-' -> io.println(a - b)
         | '*' -> io.println(a * b)
         | '/' ->
             match safe_div(a, b) {
-                | None -> io.errorln("Division by zero")
+                | None -> io.eprintln("Division by zero")
                 | Some(v) -> io.println(v)
             }
-        | _ -> io.errorln("Unknown operator")
+        | _ -> io.eprintln("Unknown operator")
     }
 
-let main() -> Nil =
-    let x: Int = io.input("Enter value x: ")
-    let y: Int = io.input("Enter value y: ")
-    let operator: Char = io.input("Enter operator: ")
+main() -> Nil =
+    x: Int = io.input("Enter value x: ")
+    y: Int = io.input("Enter value y: ")
+    operator: Char = io.input("Enter operator: ")
     calculate(operator, x, y)

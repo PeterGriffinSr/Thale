@@ -4,15 +4,14 @@ type Option[T] =
     | None
     | Some(T)
 
-let safe_div(x: Int, y: Int) -> Option[Int] =
+safe_div(x: Int, y: Int) -> Option[Int] =
     match y == 0 {
         | True -> None
         | False -> Some(x / y)
     }
 
 let main() -> Nil =
-    let result = safe_div(10, 2)
-    match result {
-        | None -> io.errorln("Division by zero")
+    match safe_div(10, 2) {
+        | None -> io.eprintln("Division by zero")
         | Some(v) -> io.println(v)
     }

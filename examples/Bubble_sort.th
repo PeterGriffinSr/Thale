@@ -1,33 +1,33 @@
 use std.io
 use std.array
 
-let swap(arr: Array[Int], i: Int, j: Int) -> Array[Int] =
-  let a = array.get(arr, i)
-  let b = array.get(arr, j)
-  let arr2 = array.set(arr, i, b)
+swap(arr: Array[Int], i: Int, j: Int) -> Array[Int] =
+  a: Int = array.get(arr, i)
+  b: Int = array.get(arr, j)
+  arr2: Array[Int] = array.set(arr, i, b)
   array.set(arr2, j, a)
 
-let rec bubble_pass(arr: Array[Int], n: Int, i: Int, swapped: Bool) -> (Array[Int], Bool) =
+rec bubble_pass(arr: Array[Int], n: Int, i: Int, swapped: Bool) -> (Array[Int], Bool) =
   match i < n - 1 {
     | False -> (arr, swapped)
     | True ->
         match array.get(arr, i) > array.get(arr, i + 1) {
           | True ->
-              let arr2 = swap(arr, i, i + 1)
+              arr2: Array[Int] = swap(arr, i, i + 1)
               bubble_pass(arr2, n, i + 1, True)
           | False ->
               bubble_pass(arr, n, i + 1, swapped)
         }
   }
 
-let rec bubble_sort(arr: Array[Int], n: Int) -> Array[Int] =
-  let (arr2, swapped) = bubble_pass(arr, n, 0, False)
+rec bubble_sort(arr: Array[Int], n: Int) -> Array[Int] =
+  (arr2, swapped): (Array[Int], Bool) = bubble_pass(arr, n, 0, False)
   match swapped {
     | True -> bubble_sort(arr2, n - 1)
     | False -> arr2
   }
 
-let main() -> Nil =
-  let nums = [5, 3, 1, 4, 2]
-  let sorted = bubble_sort(nums, array.length(nums))
+main() -> Nil =
+  nums: Array[Int] = [5, 3, 1, 4, 2]
+  sorted: Array[Int] = bubble_sort(nums, array.length(nums))
   io.println(sorted)

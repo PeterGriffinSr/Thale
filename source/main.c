@@ -1,9 +1,30 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "config.h"
+#include "parser.yy.h"
+#include "ast.h"
 
-int main()
+extern ASTNode *root;
+extern int yylex_destroy();
+extern FILE *yyin;
+
+int main(int argc, char **argv)
 {
-    printf("%s\n", THALE_VERSION);
+    if (argc < 2)
+    {
+        fprintf(stderr, "Error: requires a file argument.\n");
+        return EXIT_FAILURE;
+    }
+    const char *filename = argv[1];
+    FILE *file = fopen(filename, "r");
+    yyin = file;
+    root = NULL;
+    if (yyparse() == 0)
+    {
+        printAST(root, 0);
+        freeAST(root);
+    }
+    yylex_destroy();
+    fclose(file);
+
     return EXIT_SUCCESS;
 }

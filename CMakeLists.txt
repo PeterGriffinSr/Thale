@@ -7,18 +7,35 @@ project(thale
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_EXTENSIONS ON)
 
 find_package(FLEX REQUIRED)
 find_package(BISON REQUIRED)
 
+BISON_TARGET(thaleParser
+    source/parser/parser.y
+    ${CMAKE_CURRENT_BINARY_DIR}/parser.yy.c
+)
+
+FLEX_TARGET(thaleLexer 
+    source/parser/lexer.l 
+    ${CMAKE_CURRENT_BINARY_DIR}/lexer.yy.c
+)
+
+ADD_FLEX_BISON_DEPENDENCY(thaleLexer thaleParser)
+
 set(SOURCES
     source/main.c
+    source/ast/ast.c
+    ${FLEX_thaleLexer_OUTPUTS}
+    ${BISON_thaleParser_OUTPUTS}
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
+    source/parser
+    source/ast
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
