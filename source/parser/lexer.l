@@ -1,6 +1,9 @@
 %option noyywrap noinput nounput
 
 %{
+#ifdef _WIN32
+    #define YY_NO_UNISTD_H
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
