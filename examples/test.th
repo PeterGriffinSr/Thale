@@ -1,2 +1,5 @@
-x: Int = 10;
-x * y;
+swap(arr: Array[Int], i: Int, j: Int) -> Array[Int] =
+  a: Int = array.get(arr, i)
+  b: Int = array.get(arr, j)
+  arr2: Array[Int] = array.set(arr, i, b)
+  array.set(arr2, j, a)

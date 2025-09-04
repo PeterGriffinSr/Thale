@@ -109,6 +109,58 @@ ASTNode *create_type_node(const char *name)
     return node;
 }
 
+ASTNode *create_param_node(const char *name, ASTNode *type)
+{
+    ASTNode *node = new_node(NodeParam);
+    node->ParamDecl.name = name;
+    node->ParamDecl.typeExpr = type;
+    return node;
+}
+
+ASTNode *create_function_node(const char *name, ASTNode **params, int param_count, ASTNode *returnType, ASTNode *body)
+{
+    ASTNode *node = new_node(NodeFunctionDecl);
+    node->FunctionDecl.name = name;
+    node->FunctionDecl.params = params;
+    node->FunctionDecl.param_count = param_count;
+    node->FunctionDecl.returnType = returnType;
+    node->FunctionDecl.body = body;
+    node->FunctionDecl.is_recursive = 0;
+    return node;
+}
+
+ASTNode *create_call_node(ASTNode *callee, ASTNode **args, int count)
+{
+    ASTNode *node = new_node(NodeCallExpr);
+    node->CallExpr.callee = callee;
+    node->CallExpr.args = args;
+    node->CallExpr.param_count = count;
+    return node;
+}
+
+ASTNode *create_array_node(ASTNode **elems, int count)
+{
+    ASTNode *node = new_node(NodeArrayLiteral);
+    node->ArrayLiteral.elements = elems;
+    node->ArrayLiteral.elem_count = count;
+    return node;
+}
+
+ASTNode *create_array_type_node(ASTNode *inner)
+{
+    ASTNode *node = new_node(NodeArrayType);
+    node->ArrayType.inner_type = inner;
+    return node;
+}
+
+ASTNode *create_property_access_node(ASTNode *object, const char *property)
+{
+    ASTNode *node = new_node(NodePropertyAccess);
+    node->PropertyAccess.object = object;
+    node->PropertyAccess.property = property;
+    return node;
+}
+
 void indent_print(int indentation, const char *fmt, ...)
 {
     va_list args;
@@ -172,6 +224,53 @@ void printAST(ASTNode *node, int indentation)
     case NodeTypeExpr:
         indent_print(indentation, "TypeExpr: %s\n", node->StrVal);
         break;
+    case NodeParam:
+        indent_print(indentation, "Param: %s\n", node->ParamDecl.name);
+        indent_print(indentation, "Type:\n");
+        printAST(node->ParamDecl.typeExpr, indentation + 2);
+        break;
+    case NodeFunctionDecl:
+        if (node->FunctionDecl.is_recursive)
+        {
+            indent_print(indentation, "FunctionDecl (rec): %s\n", node->FunctionDecl.name);
+        }
+        else
+        {
+            indent_print(indentation, "FunctionDecl: %s\n", node->FunctionDecl.name);
+        }
+        indent_print(indentation, "Params:\n");
+        for (int i = 0; i < node->FunctionDecl.param_count; ++i)
+            printAST(node->FunctionDecl.params[i], indentation + 2);
+
+        indent_print(indentation, "ReturnType:\n");
+        printAST(node->FunctionDecl.returnType, indentation + 2);
+
+        indent_print(indentation, "Body:\n");
+        printAST(node->FunctionDecl.body, indentation + 2);
+        break;
+    case NodeCallExpr:
+        indent_print(indentation, "CallExpr:\n");
+        printAST(node->CallExpr.callee, indentation + 2);
+        for (int i = 0; i < node->CallExpr.param_count; i++)
+        {
+            indent_print(indentation + 2, "Arg %d:\n", i);
+            printAST(node->CallExpr.args[i], indentation + 4);
+        }
+        break;
+    case NodeArrayLiteral:
+        indent_print(indentation, "ArrayLiteral:\n");
+        for (int i = 0; i < node->ArrayLiteral.elem_count; ++i)
+            printAST(node->ArrayLiteral.elements[i], indentation + 2);
+        break;
+    case NodeArrayType:
+        indent_print(indentation, "ArrayType:\n");
+        printAST(node->ArrayType.inner_type, indentation + 2);
+        break;
+    case NodePropertyAccess:
+        indent_print(indentation, "PropertyAccess:\n");
+        printAST(node->PropertyAccess.object, indentation + 2);
+        indent_print(indentation + 2, "Property: %s\n", node->PropertyAccess.property);
+        break;
     default:
         indent_print(indentation, "Unknown node\n");
         break;
@@ -215,6 +314,38 @@ void freeAST(ASTNode *node)
         break;
     case NodeTypeExpr:
         free((char *)node->StrVal);
+        break;
+    case NodeParam:
+        free((char *)node->ParamDecl.name);
+        freeAST(node->ParamDecl.typeExpr);
+        break;
+    case NodeFunctionDecl:
+        for (int i = 0; i < node->FunctionDecl.param_count; ++i)
+            freeAST(node->FunctionDecl.params[i]);
+        free(node->FunctionDecl.params);
+        freeAST(node->FunctionDecl.returnType);
+        freeAST(node->FunctionDecl.body);
+        free((char *)node->FunctionDecl.name);
+        break;
+    case NodeCallExpr:
+        freeAST(node->CallExpr.callee);
+        for (int i = 0; i < node->CallExpr.param_count; i++)
+        {
+            freeAST(node->CallExpr.args[i]);
+        }
+        free(node->CallExpr.args);
+        break;
+    case NodeArrayLiteral:
+        for (int i = 0; i < node->ArrayLiteral.elem_count; ++i)
+            freeAST(node->ArrayLiteral.elements[i]);
+        free(node->ArrayLiteral.elements);
+        break;
+    case NodeArrayType:
+        freeAST(node->ArrayType.inner_type);
+        break;
+    case NodePropertyAccess:
+        freeAST(node->PropertyAccess.object);
+        free((char *)node->PropertyAccess.property);
         break;
     default:
         break;
