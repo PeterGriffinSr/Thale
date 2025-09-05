@@ -55,6 +55,7 @@ StringLiteral       \"(\\.|[^\\"])*\"
 "->"                { yycolumn += yyleng; return Arrow; }
 
 "rec"               { yycolumn += yyleng; return Recursion; }
+"in"                { yycolumn += yyleng; return In; }
 "type"              { yycolumn += yyleng; return Type; }
 "use"               { yycolumn += yyleng; return Use; }
 "match"             { yycolumn += yyleng; return Match; }

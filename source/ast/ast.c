@@ -161,6 +161,55 @@ ASTNode *create_property_access_node(ASTNode *object, const char *property)
     return node;
 }
 
+ASTNode *create_match_node(ASTNode *cond, ASTNode *arms)
+{
+    ASTNode *node = new_node(NodeMatch);
+    node->MatchExpr.cond = cond;
+    node->MatchExpr.arms = arms;
+    return node;
+}
+
+ASTNode *create_match_arms_node(ASTNode *pat, ASTNode *body, ASTNode *next)
+{
+    ASTNode *node = new_node(NodeMatchArm);
+    node->MatchArm.pattern = pat;
+    node->MatchArm.body = body;
+    node->MatchArm.next = next;
+    return node;
+}
+
+ASTNode *append_match_arm(ASTNode *arms, ASTNode *pat, ASTNode *body)
+{
+    ASTNode *cur = arms;
+    while (cur->MatchArm.next)
+        cur = cur->MatchArm.next;
+    cur->MatchArm.next = create_match_arms_node(pat, body, NULL);
+    return arms;
+}
+
+ASTNode *wrap_block_if_needed(ASTNode *list)
+{
+    if (list->BlockExpr.count <= 1)
+    {
+        ASTNode *single = list->BlockExpr.exprs[0];
+        if (single != list)
+            free(list->BlockExpr.exprs);
+        free(list);
+        return single;
+    }
+    else
+    {
+        return list;
+    }
+}
+
+ASTNode *create_block_node_append(ASTNode *expr)
+{
+    ASTNode *block = create_block_node();
+    append_expr(block, expr);
+    return block;
+}
+
 void indent_print(int indentation, const char *fmt, ...)
 {
     va_list args;
@@ -238,13 +287,21 @@ void printAST(ASTNode *node, int indentation)
         {
             indent_print(indentation, "FunctionDecl: %s\n", node->FunctionDecl.name);
         }
-        indent_print(indentation, "Params:\n");
-        for (int i = 0; i < node->FunctionDecl.param_count; ++i)
-            printAST(node->FunctionDecl.params[i], indentation + 2);
 
+        indent_print(indentation, "Params:\n");
+        if (node->FunctionDecl.param_count == 0)
+        {
+            indent_print(indentation + 2, "(None)\n");
+        }
+        else
+        {
+            for (int i = 0; i < node->FunctionDecl.param_count; ++i)
+            {
+                printAST(node->FunctionDecl.params[i], indentation + 2);
+            }
+        }
         indent_print(indentation, "ReturnType:\n");
         printAST(node->FunctionDecl.returnType, indentation + 2);
-
         indent_print(indentation, "Body:\n");
         printAST(node->FunctionDecl.body, indentation + 2);
         break;
@@ -271,6 +328,27 @@ void printAST(ASTNode *node, int indentation)
         printAST(node->PropertyAccess.object, indentation + 2);
         indent_print(indentation + 2, "Property: %s\n", node->PropertyAccess.property);
         break;
+    case NodeMatch:
+        indent_print(indentation, "Match:\n");
+        indent_print(indentation + 1, "Condition:\n");
+        printAST(node->MatchExpr.cond, indentation + 2);
+        indent_print(indentation + 1, "Arms:\n");
+        printAST(node->MatchExpr.arms, indentation + 2);
+        break;
+    case NodeMatchArm:
+    {
+        indent_print(indentation, "MatchArm:\n");
+        indent_print(indentation + 1, "Pattern:\n");
+        printAST(node->MatchArm.pattern, indentation + 2);
+        indent_print(indentation + 1, "Body:\n");
+        printAST(node->MatchArm.body, indentation + 2);
+        if (node->MatchArm.next)
+        {
+            indent_print(indentation + 1, "Next Arm:\n");
+            printAST(node->MatchArm.next, indentation + 2);
+        }
+        break;
+    }
     default:
         indent_print(indentation, "Unknown node\n");
         break;
@@ -347,6 +425,18 @@ void freeAST(ASTNode *node)
         freeAST(node->PropertyAccess.object);
         free((char *)node->PropertyAccess.property);
         break;
+    case NodeMatch:
+        freeAST(node->MatchExpr.cond);
+        freeAST(node->MatchExpr.arms);
+        break;
+    case NodeMatchArm:
+    {
+        freeAST(node->MatchArm.pattern);
+        freeAST(node->MatchArm.body);
+        if (node->MatchArm.next)
+            freeAST(node->MatchArm.next);
+        break;
+    }
     default:
         break;
     }

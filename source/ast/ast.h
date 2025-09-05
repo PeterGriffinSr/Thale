@@ -21,6 +21,8 @@ typedef enum
     NodeArrayLiteral,
     NodeArrayType,
     NodePropertyAccess,
+    NodeMatch,
+    NodeMatchArm
 } NodeType;
 
 typedef struct ASTNode ASTNode;
@@ -98,6 +100,16 @@ struct ASTNode
         ASTNode *object;
         const char *property;
     } PropertyAccess;
+
+    struct
+    {
+        ASTNode *cond, *arms;
+    } MatchExpr;
+
+    struct
+    {
+        ASTNode *pattern, *body, *next;
+    } MatchArm;
 };
 
 ASTNode *create_int_node(int value);
@@ -118,6 +130,11 @@ ASTNode *create_call_node(ASTNode *callee, ASTNode **args, int count);
 ASTNode *create_array_node(ASTNode **elems, int count);
 ASTNode *create_array_type_node(ASTNode *inner);
 ASTNode *create_property_access_node(ASTNode *object, const char *property);
+ASTNode *create_match_arms_node(ASTNode *pat, ASTNode *body, ASTNode *next);
+ASTNode *create_match_node(ASTNode *cond, ASTNode *arms);
+ASTNode *append_match_arm(ASTNode *arms, ASTNode *pat, ASTNode *body);
+ASTNode *wrap_block_if_needed(ASTNode *list);
+ASTNode *create_block_node_append(ASTNode *expr);
 
 void indent_print(int indentation, const char *fmt, ...);
 void printAST(ASTNode *node, int indentation);

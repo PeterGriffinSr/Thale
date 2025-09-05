@@ -1,5 +1,13 @@
-swap(arr: Array[Int], i: Int, j: Int) -> Array[Int] =
-  a: Int = array.get(arr, i)
-  b: Int = array.get(arr, j)
-  arr2: Array[Int] = array.set(arr, i, b)
-  array.set(arr2, j, a)
+calculate(op: Char, a: Int, b: Int) -> Nil =
+    match op {
+        | '+' -> io.println(a + b)
+        | '-' -> io.println(a - b)
+        | '*' -> io.println(a * b)
+        | '/' ->
+            match safe_div(a, b) {
+                | None -> io.eprintln("Division by zero")
+                | Some(v) -> io.println(v)
+            }
+        | _ -> io.eprintln("Unknown operator")
+    }
+in

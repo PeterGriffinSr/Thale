@@ -3,12 +3,14 @@ use std.io
 type Option[T] =
     | None
     | Some(T)
+in
 
 safe_div(x: Int, y: Int) -> Option[Int] =
     match y == 0 {
         | True -> None
         | False -> Some(x / y)
     }
+in
 
 calculate(op: Char, a: Int, b: Int) -> Nil =
     match op {
@@ -22,9 +24,11 @@ calculate(op: Char, a: Int, b: Int) -> Nil =
             }
         | _ -> io.eprintln("Unknown operator")
     }
+in
 
 main() -> Nil =
     x: Int = io.input("Enter value x: ")
     y: Int = io.input("Enter value y: ")
     operator: Char = io.input("Enter operator: ")
     calculate(operator, x, y)
+in

@@ -6,6 +6,7 @@ swap(arr: Array[Int], i: Int, j: Int) -> Array[Int] =
   b: Int = array.get(arr, j)
   arr2: Array[Int] = array.set(arr, i, b)
   array.set(arr2, j, a)
+in
 
 rec bubble_pass(arr: Array[Int], n: Int, i: Int, swapped: Bool) -> (Array[Int], Bool) =
   match i < n - 1 {
@@ -19,6 +20,7 @@ rec bubble_pass(arr: Array[Int], n: Int, i: Int, swapped: Bool) -> (Array[Int], 
               bubble_pass(arr, n, i + 1, swapped)
         }
   }
+in
 
 rec bubble_sort(arr: Array[Int], n: Int) -> Array[Int] =
   (arr2, swapped): (Array[Int], Bool) = bubble_pass(arr, n, 0, False)
@@ -26,8 +28,10 @@ rec bubble_sort(arr: Array[Int], n: Int) -> Array[Int] =
     | True -> bubble_sort(arr2, n - 1)
     | False -> arr2
   }
+in
 
 main() -> Nil =
   nums: Array[Int] = [5, 3, 1, 4, 2]
   sorted: Array[Int] = bubble_sort(nums, array.length(nums))
   io.println(sorted)
+in
