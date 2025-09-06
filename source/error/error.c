@@ -21,11 +21,10 @@ static void print_error_context(const char *file, int line, int column, int leng
 
     int start = (line - context_lines > 1) ? line - context_lines : 1;
     int end = line + context_lines;
-    char *buf = NULL;
-    size_t len = 0;
+    char buf[1024];
     int current = 1;
 
-    while (getline(&buf, &len, fp) != -1)
+    while (fgets(buf, sizeof(buf), fp))
     {
         if (current >= start && current <= end)
         {
@@ -33,10 +32,12 @@ static void print_error_context(const char *file, int line, int column, int leng
             if (n > 0 && buf[n - 1] == '\n')
                 buf[n - 1] = '\0';
             fprintf(stderr, "%4d | %s\n", current, buf);
+
             if (current == line)
             {
+                int effective_len = (int)strlen(buf);
                 fprintf(stderr, "      %*s", column, "");
-                for (int i = 0; i < length && i + column <= (int)strlen(buf); i++)
+                for (int i = 0; i < length && i + column <= effective_len; i++)
                     fprintf(stderr, BOLD RED "^");
                 fprintf(stderr, RESET "\n");
             }
@@ -44,7 +45,6 @@ static void print_error_context(const char *file, int line, int column, int leng
         current++;
     }
 
-    free(buf);
     fclose(fp);
 }
 
