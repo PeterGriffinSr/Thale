@@ -22,7 +22,13 @@ typedef enum
     NodeArrayType,
     NodePropertyAccess,
     NodeMatch,
-    NodeMatchArm
+    NodeMatchArm,
+    NodeWildcardPattern,
+    NodeTypeDecl,
+    NodeVariant,
+    NodeTypeParam,
+    NodeConstructorCall,
+    NodeGenericType
 } NodeType;
 
 typedef struct ASTNode ASTNode;
@@ -110,6 +116,37 @@ struct ASTNode
     {
         ASTNode *pattern, *body, *next;
     } MatchArm;
+
+    struct
+    {
+        const char *name;
+        ASTNode **variants, **type_params;
+        int variant_count, param_count;
+    } TypeDecl;
+
+    struct
+    {
+        const char *name;
+        ASTNode *payload;
+    } Variant;
+
+    struct
+    {
+        const char *name;
+    } TypeParam;
+
+    struct
+    {
+        const char *ctor;
+        ASTNode **args;
+        int arg_count;
+    } ConstructorCall;
+
+    struct
+    {
+        const char *BaseName;
+        struct ASTNode *ParamType;
+    } GenericType;
 };
 
 ASTNode *create_int_node(int value);
@@ -135,6 +172,7 @@ ASTNode *create_match_node(ASTNode *cond, ASTNode *arms);
 ASTNode *append_match_arm(ASTNode *arms, ASTNode *pat, ASTNode *body);
 ASTNode *wrap_block_if_needed(ASTNode *list);
 ASTNode *create_block_node_append(ASTNode *expr);
+ASTNode *create_wildcard_pattern_node(void);
 
 void indent_print(int indentation, const char *fmt, ...);
 void printAST(ASTNode *node, int indentation);

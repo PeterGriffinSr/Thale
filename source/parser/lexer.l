@@ -7,9 +7,22 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include "error.h"
 #include "parser.yy.h"
 
-int yycolumn = 1;
+int find_invalid_escape_column(const char *text, int start_column);
+int find_invalid_escape_column(const char *text, int start_column) {
+    int col = start_column;
+    for (int i = 0; text[i]; i++, col++) {
+        if (text[i] == '\\') {
+            i++; col++; // skip the next char (the escape itself)
+            if (!strchr("abfnrtv0'\"?", text[i])) {
+                return col - 1;
+            }
+        }
+    }
+    return start_column;
+}
 %}
 
 Digit               [0-9]
@@ -21,6 +34,9 @@ CharLiteral         \'(\\.|[^\\'])\'
 StringLiteral       \"(\\.|[^\\"])*\"
 
 %%
+
+\'\\[^abfnrtv0\'"?]\' { ErrorLocation loc = make_location(yyfilename, yylineno, yycolumn + 1); lexer_error(&loc, "Invalid escape sequence in character literal '%s'", yytext); yycolumn += yyleng; }
+\"([^\\"]|\\[abfnrtv0\'"?])*\\[^abfnrtv0\'"?]([^\\"]|\\[abfnrtv0\'"?])*\" { int err_col = find_invalid_escape_column(yytext, yycolumn); ErrorLocation loc = make_location(yyfilename, yylineno, err_col); lexer_error(&loc, "Invalid escape sequence in string literal '%s'", yytext); yycolumn += yyleng; }
 
 "#"[^\n]*\n         { /* ignore single line comments */ }
 
@@ -77,5 +93,11 @@ StringLiteral       \"(\\.|[^\\"])*\"
 
 [ \t\r]+            { yycolumn += yyleng; }
 \n                  { yycolumn = 1; yylineno++; }
+
+\'[^']*$            { ErrorLocation loc = make_location(yyfilename, yylineno, yycolumn); lexer_error(&loc, "Unterminated character literal"); yycolumn += yyleng; }
+\"[^\"\n]*$         { ErrorLocation loc = make_location(yyfilename, yylineno, yycolumn); lexer_error(&loc, "Unterminated string literal"); yycolumn += yyleng; }
+[0-9]+\.[0-9]*\.[0-9]* { ErrorLocation loc = make_location(yyfilename, yylineno, yycolumn); lexer_error(&loc, "Malformed float literal '%s'", yytext); yycolumn += yyleng; }
+[0-9]+[a-zA-Z]+     { ErrorLocation loc = make_location(yyfilename, yylineno, yycolumn); lexer_error(&loc, "Invalid numeric literal '%s'", yytext); yycolumn += yyleng; }
+.                   { ErrorLocation loc = make_location(yyfilename, yylineno, yycolumn); lexer_error(&loc, "Unrecognized character '%s'", yytext); yycolumn += yyleng; }
 
 %%

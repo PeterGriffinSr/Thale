@@ -27,6 +27,7 @@ ADD_FLEX_BISON_DEPENDENCY(thaleLexer thaleParser)
 set(SOURCES
     source/main.c
     source/ast/ast.c
+    source/error/error.c
     ${FLEX_thaleLexer_OUTPUTS}
     ${BISON_thaleParser_OUTPUTS}
 )
@@ -36,6 +37,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE
     source/parser
     source/ast
+    source/error
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
@@ -59,7 +61,7 @@ if (ENABLE_WARNINGS)
             -Wwrite-strings -Wredundant-decls -Wdisabled-optimization 
             -Wdouble-promotion -Wmissing-declarations -Wconversion 
             -Wstrict-overflow=2 -Wvla
-            -fstack-protector-all
+            -fstack-protector-all -Wimplicit-function-declaration
         )
     endif()
 endif()

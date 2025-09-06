@@ -1,13 +1,1 @@
-calculate(op: Char, a: Int, b: Int) -> Nil =
-    match op {
-        | '+' -> io.println(a + b)
-        | '-' -> io.println(a - b)
-        | '*' -> io.println(a * b)
-        | '/' ->
-            match safe_div(a, b) {
-                | None -> io.eprintln("Division by zero")
-                | Some(v) -> io.println(v)
-            }
-        | _ -> io.eprintln("Unknown operator")
-    }
-in
+x: String = "Hello\xZ"

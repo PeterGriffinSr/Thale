@@ -48,7 +48,7 @@
 %token Recursion In Type Use Match True False
 %token Int Float String Char Bool Nil Array
 
-%type <node> program expr primary_expr expr_list type param param_list opt_param_list arg_list arg_expr_list decl match_arms
+%type <node> program expr primary_expr expr_list type param param_list opt_param_list arg_list arg_expr_list decl match_arms pattern
 
 %%
 
@@ -87,8 +87,12 @@ expr:
     | Identifier LParen arg_list RParen { ASTNode **args = NULL; int n = 0; if ($3 && $3->BlockExpr.count > 0) { args = $3->BlockExpr.exprs; n = $3->BlockExpr.count; free($3); } else { if ($3) { free($3->BlockExpr.exprs); free($3); } } $$ = create_call_node(create_identifier_node($1), args, n); };
 
 match_arms:
-      Pipe expr Arrow expr_list { $$ = create_match_arms_node($2, $4, NULL); }
-    | match_arms Pipe expr Arrow expr_list { $$ = append_match_arm($1, $3, $5); };
+      Pipe pattern Arrow expr_list { $$ = create_match_arms_node($2, $4, NULL); }
+    | match_arms Pipe pattern Arrow expr_list { $$ = append_match_arm($1, $3, $5); };
+
+pattern:
+      expr { $$ = $1; }
+    | Underscore { $$ = create_wildcard_pattern_node(); };
 
 primary_expr:
       IntLiteral { $$ = create_int_node($1); }

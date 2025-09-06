@@ -3,15 +3,18 @@ use std.io
 type Option[T] =
     | None
     | Some(T)
+in
 
 safe_div(x: Int, y: Int) -> Option[Int] =
     match y == 0 {
         | True -> None
         | False -> Some(x / y)
     }
+in
 
 let main() -> Nil =
     match safe_div(10, 2) {
         | None -> io.eprintln("Division by zero")
         | Some(v) -> io.println(v)
     }
+in

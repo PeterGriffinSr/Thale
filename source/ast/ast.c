@@ -210,6 +210,12 @@ ASTNode *create_block_node_append(ASTNode *expr)
     return block;
 }
 
+ASTNode *create_wildcard_pattern_node(void)
+{
+    ASTNode *node = new_node(NodeWildcardPattern);
+    return node;
+}
+
 void indent_print(int indentation, const char *fmt, ...)
 {
     va_list args;
@@ -349,6 +355,44 @@ void printAST(ASTNode *node, int indentation)
         }
         break;
     }
+    case NodeWildcardPattern:
+        indent_print(indentation, "WildcardPattern: _\n");
+        break;
+    case NodeTypeDecl:
+        indent_print(indentation, "TypeDecl: %s\n", node->TypeDecl.name);
+        if (node->TypeDecl.param_count > 0)
+        {
+            indent_print(indentation + 1, "Params:\n");
+            for (int i = 0; i < node->TypeDecl.param_count; i++)
+                printAST(node->TypeDecl.type_params[i], indentation + 2);
+        }
+        indent_print(indentation + 1, "Variants:\n");
+        for (int i = 0; i < node->TypeDecl.variant_count; i++)
+            printAST(node->TypeDecl.variants[i], indentation + 2);
+        break;
+    case NodeVariant:
+        indent_print(indentation, "Variant: %s\n", node->Variant.name);
+        if (node->Variant.payload)
+        {
+            indent_print(indentation + 1, "Payload:\n");
+            printAST(node->Variant.payload, indentation + 2);
+        }
+        break;
+    case NodeTypeParam:
+        indent_print(indentation, "TypeParam: %s\n", node->TypeParam.name);
+        break;
+    case NodeConstructorCall:
+        indent_print(indentation, "ConstructorCall: %s\n", node->ConstructorCall.ctor);
+        for (int i = 0; i < node->ConstructorCall.arg_count; i++)
+        {
+            indent_print(indentation + 1, "Arg %d:\n", i);
+            printAST(node->ConstructorCall.args[i], indentation + 2);
+        }
+        break;
+    case NodeGenericType:
+        indent_print(indentation, "GenericType: %s\n", node->GenericType.BaseName);
+        printAST(node->GenericType.ParamType, indentation + 2);
+        break;
     default:
         indent_print(indentation, "Unknown node\n");
         break;
@@ -437,6 +481,8 @@ void freeAST(ASTNode *node)
             freeAST(node->MatchArm.next);
         break;
     }
+    case NodeWildcardPattern:
+        break;
     default:
         break;
     }
