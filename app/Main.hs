@@ -1,6 +1,7 @@
 module Main (main) where
 
-import Prelude (IO, putStrLn)
+import Thale.Cli.Cli (runCli)
+import Prelude (IO)
 
 main :: IO ()
-main = putStrLn "Hello, Haskell!"
+main = runCli

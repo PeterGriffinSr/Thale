@@ -6,7 +6,7 @@ Create a new Thale script with the `.th` extension. Here's a basic example:
 ```th
 use std.io
 
-let main() -> Nil =
+val main() -> Nil =
     io.println("Hello, World!")
 in
 ```
