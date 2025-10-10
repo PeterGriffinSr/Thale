@@ -40,6 +40,8 @@ jobs:
           ghc-version: 'latest'
           cabal-version: 'latest'
           cabal-update: true
-
+      - name: Install Alex and Happy
+        run: |
+          cabal install alex happy
       - name: Build
         run: cabal build all
