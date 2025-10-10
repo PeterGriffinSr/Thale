@@ -1,0 +1,14 @@
+use std.io
+
+val fib(n) {
+    val fib_aux(m, a, b) {
+        match m with
+        | 0 -> a
+        | _ -> fib_aux(m - 1, b, a + b)
+    }
+    fib_aux(n, 0, 1)
+}
+
+val main() {
+    io.println(fib(10))
+}

@@ -1,0 +1,5 @@
+use std.io
+
+val main() {
+    io.println("Hello, world")
+}

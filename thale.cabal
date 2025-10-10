@@ -1,31 +1,69 @@
-cabal-version:      3.0
-name:               thale
-version:            0.2.0.0
--- synopsis:
--- description:
-license:            MIT
-license-file:       LICENSE
-author:             PeterGriffinSr
-maintainer:         codezz-ops@protonmail.com
--- copyright:
-category:           Language
-build-type:         Simple
-extra-doc-files:    CHANGELOG.md
--- extra-source-files:
+cabal-version: 3.0
+name: thale
+version: 0.4.0.0
+license: MIT
+license-file: LICENSE
+maintainer: codezz-ops@protonmail.com
+author: PeterGriffinSr
+homepage: https://github.com/PeterGriffinSr/Thale
+bug-reports: https://github.com/PeterGriffinSr/Thale/issues
+synopsis: A small, purely functional programming language.
+description:
+  Thale is a small, purely functional programming language with immutability, expression-based syntax, and powerful pattern matching. The language emphasizes clarity, safety, and functional purity.
 
-common warnings
+category: Language
+build-type: Simple
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+
+source-repository head
+  type: git
+  location: https://github.com/PeterGriffinSr/Thale
+
+library
+  exposed-modules:
+    Thale.Cli.Cli
+    Thale.Compiler.Ast
+    Thale.Compiler.Lexer
+    Thale.Compiler.Parser
+    Thale.Compiler.Pretty
+
+  hs-source-dirs: src
+  other-modules:
+    Paths_thale
+    Thale.Cli.New
+    Thale.Cli.Options
+    Thale.Cli.Parser
+    Thale.Cli.Verify
+    Thale.Compiler.Token
+
+  default-language: Haskell2010
   ghc-options:
-    -Wall -Wcompat -Wimplicit-prelude -Wmissing-export-lists
-    -Wmissing-pattern-synonym-signatures -Wmissing-home-modules
-    -Wmissing-local-signatures -Werror=missing-signatures
-    -Werror=unused-imports -Werror=unused-matches
-    -Werror=incomplete-patterns -Werror=incomplete-uni-patterns
-    -Werror=incomplete-record-updates -Werror=deprecations
+    -Wall
+    -Wcompat
+    -Werror
+
+  build-depends:
+    array,
+    base,
+    directory,
+    filepath,
+    optparse-applicative,
+    prettyprinter,
+    process,
+    text,
+    time,
 
 executable thale
-    import:           warnings
-    main-is:          Main.hs
-    hs-source-dirs:   app, src
-    other-modules:    Thale.Cli.Cli Thale.Cli.Options Thale.Cli.Parser Paths_thale Thale.Cli.New
-    build-depends:    base, optparse-applicative, filepath, directory
-    default-language: Haskell2010
+  main-is: Main.hs
+  hs-source-dirs: app
+  default-language: Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Werror
+
+  build-depends:
+    base,
+    thale,

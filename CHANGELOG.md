@@ -22,3 +22,43 @@
 * Updated `commandParser` to include `new` and `format` commands with proper `progDesc`.
 * Ensured safe directory creation for `thale new`, prevents overwriting existing projects.
 * Improved user experience with structured help output and readable command descriptions.
+
+## 0.3.0.0 -- 2025-09-18
+
+* Core Language infrastructure:
+  * Implemented full **Lexer**, **Parser** and **AST** for Thale.
+  * Parser now supports:
+    * `val` declarations with type annotations or type inference.
+    * Function declarations with typed parameters and return types or type inference.
+    * `match ... with` expressions with multiple branches.
+    * `Tuple`, `Array`, and `List` literals.
+    * Arithmetic and comparison operators (`+`, `-`, `*`, `/`, `<`, `>`, etc.).
+    * Lambda expressions.
+  * Fixed Issues in the **Parser** involving, blocks with match expressions.
+  * AST supports nested expressions, sequences (Seq), and branch-local variable scoping.
+* Functional programming features:
+  * Recursive functions fully supported.
+  * Multi-expression branches now handled correctly.
+* Project infrastructure:
+  * Updated `.cabal` file:
+    * Added a shared `common warnings` stanza for strict compilation flags.
+    * Simplified and centralized GHC warning/error options (`-Wall -Wcompat -Werror`).
+    * Reduced duplication between library and executable definitions.
+  * Improved **README** for clarity and readability.
+  * Added more **examples** (`Fibonacci`, `Bubble_sort`, etc.) showcasing recursion, pattern matching, and type inference.
+* CLI infrastructure:
+  * Implemented `new --interactive`.
+  * Initial implementation of `thale format` formatter for Thale source code.
+
+## 0.4.0.0 -- 2025-10-03
+
+* Core Language infrastructure:
+  * Complete redesign of Thale's syntax.
+  * Removed Built-in **String**, **Int**.
+* Project infrastructure:
+  * Updated `.cabal` file:
+    * Removed shared `common warnings` stanze for compilation flags.
+  * Improved **README** for clarity.
+* CLI infrastructure:
+  * Removed Initial implementation of `thale format` formatter for Thale source code.
+  * Initial implementation of `thale verify` to verify Thale. 

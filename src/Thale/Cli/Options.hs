@@ -7,7 +7,11 @@ data Command
   | Build FilePath
   | Format FilePath
   | Check FilePath
-  | New FilePath
   | Repl
   | Version
+  | Verify
+  | New FilePath
+  | NewInteractive
+  | Test
+  | Doc
   deriving (Show)
