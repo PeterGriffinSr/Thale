@@ -20,7 +20,7 @@ val bubble_pass(lst: List[Float], n: Float, i: Float, swapped: Bool) -> (List[Fl
 }
 
 val bubble_sort(lst: List[Float], n: Float) -> List[Float] {
-    # val (lst', swapped): (List[Float], Bool) = bubble_pass(lst, n, 0, False)
+    val (lst', swapped): (List[Float], Bool) = bubble_pass(lst, n, 0, False)
     match swapped with
     | True -> bubble_sort(lst', n - 1)
     | False -> lst'

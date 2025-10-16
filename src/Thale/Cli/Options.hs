@@ -1,6 +1,6 @@
 module Thale.Cli.Options (Command (..)) where
 
-import Prelude
+import Prelude (FilePath, Show)
 
 data Command
   = Run FilePath

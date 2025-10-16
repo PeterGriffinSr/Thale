@@ -1,56 +1,59 @@
 {
-module Thale.Compiler.Parser where
-import Thale.Compiler.Token (Token(..))
+{-# LANGUAGE LambdaCase #-}
+module Thale.Compiler.Parser (parse) where
+
+import Thale.Compiler.Token (Token(..), LocatedToken(..))
 import Thale.Compiler.Ast (Type(..), Expr(..))
 import Thale.Compiler.Pretty (markRecursive)
+import Thale.Compiler.Error (printParseError)
 }
 
 %name parse
-%tokentype { Token }
-%error { parseError }
+%tokentype { LocatedToken }
+%error { printParseError }
 
 %token
-  floatType { TokenFloatType }
-  charType { TokenCharType }
-  unitType { TokenUnitType }
-  listType { TokenListType }
-  boolType { TokenBoolType }
-  ident { TokenIdentifier $$ }
-  float { TokenFloat $$ }
-  char { TokenChar $$ }
-  string { TokenString $$ }
-  bool { TokenBool $$ }
-  lparen { TokenLParen }
-  rparen { TokenRParen }
-  lbrace { TokenLBrace }
-  rbrace { TokenRBrace }
-  lbracket { TokenLBracket }
-  rbracket { TokenRBracket }
-  val { TokenVal }
-  use { TokenUse }
-  match { TokenMatch }
-  with { TokenWith }
-  colon { TokenColon }
-  comma { TokenComma }
-  semicolon { TokenSemicolon }
-  equal { TokenEqual }
-  underscore { TokenUnderscore }
-  dot { TokenDot }
-  pipe { TokenPipe }
-  arrow { TokenArrow }
-  plus { TokenPlus }
-  minus { TokenMinus }
-  star { TokenStar }
-  slash { TokenSlash }
-  percent { TokenPercent }
-  carot { TokenCarot }
-  less { TokenLess }
-  greater { TokenGreater }
-  notequal { TokenNotEqual }
-  bang { TokenBang }
-  logicalor { TokenLogicalOr }
-  logicaland { TokenLogicalAnd }
-  
+  floatType { LocatedToken _ _ TokenFloatType }
+  charType { LocatedToken _ _ TokenCharType }
+  unitType { LocatedToken _ _ TokenUnitType }
+  listType { LocatedToken _ _ TokenListType }
+  boolType { LocatedToken _ _ TokenBoolType }
+  ident { LocatedToken _ _ (TokenIdentifier $$) }
+  float { LocatedToken _ _ (TokenFloat $$) }
+  char { LocatedToken _ _ (TokenChar $$) }
+  string { LocatedToken _ _ (TokenString $$) }
+  bool { LocatedToken _ _ (TokenBool $$) }
+  lparen { LocatedToken _ _ TokenLParen }
+  rparen { LocatedToken _ _ TokenRParen }
+  lbrace { LocatedToken _ _ TokenLBrace }
+  rbrace { LocatedToken _ _ TokenRBrace }
+  lbracket { LocatedToken _ _ TokenLBracket }
+  rbracket { LocatedToken _ _ TokenRBracket }
+  val { LocatedToken _ _ TokenVal }
+  use { LocatedToken _ _ TokenUse }
+  match { LocatedToken _ _ TokenMatch }
+  with { LocatedToken _ _ TokenWith }
+  colon { LocatedToken _ _ TokenColon }
+  comma { LocatedToken _ _ TokenComma }
+  semicolon { LocatedToken _ _ TokenSemicolon }
+  equal { LocatedToken _ _ TokenEqual }
+  underscore { LocatedToken _ _ TokenUnderscore }
+  dot { LocatedToken _ _ TokenDot }
+  pipe { LocatedToken _ _ TokenPipe }
+  arrow { LocatedToken _ _ TokenArrow }
+  plus { LocatedToken _ _ TokenPlus }
+  minus { LocatedToken _ _ TokenMinus }
+  star { LocatedToken _ _ TokenStar }
+  slash { LocatedToken _ _ TokenSlash }
+  percent { LocatedToken _ _ TokenPercent }
+  carot { LocatedToken _ _ TokenCarot }
+  less { LocatedToken _ _ TokenLess }
+  greater { LocatedToken _ _ TokenGreater }
+  notequal { LocatedToken _ _ TokenNotEqual }
+  bang { LocatedToken _ _ TokenBang }
+  logicalor { LocatedToken _ _ TokenLogicalOr }
+  logicaland { LocatedToken _ _ TokenLogicalAnd }
+
 %right equal
 %left logicalor
 %left logicaland
@@ -170,7 +173,12 @@ PrimaryExpr : ident { Var $1 }
     | val ident colon TypeTok equal Expr { ValDecl $2 $4 $6 }
     | val ident equal Expr { ValDecl $2 TypeInfer $4 }
     | PrimaryExpr dot ident { PropertyAccess $1 $3 }
+    | val lparen IdList rparen colon TypeList equal Expr { ValDeclTuple $3 $6 $8 }
     | lparen ExprListComma rparen { Tuple $2 }
+
+IdList :: { [String] }
+IdList : ident comma IdList { $1 : $3 }
+       | ident { [$1] }
 
 ExprListComma :: { [Expr] }
 ExprListComma
@@ -210,12 +218,3 @@ TypeTok : floatType { TypeFloat }
 TypeList :: { [Type] }
 TypeList : TypeTok comma TypeList { $1 : $3 }
          | TypeTok { [$1] }
-
-{
-parseError :: [Token] -> a
-parseError tokens =
-    let tokStr = case tokens of
-                    []    -> "<end of input>"
-                    (t:_) -> show t
-    in error $ "Parse error at token: " <> tokStr
-}

@@ -14,7 +14,7 @@ import Options.Applicative
     (<|>),
   )
 import Thale.Cli.Options (Command (..))
-import Prelude
+import Prelude (pure, (<$>), (<>))
 
 commandParser :: Parser Command
 commandParser =

@@ -61,4 +61,28 @@
   * Improved **README** for clarity.
 * CLI infrastructure:
   * Removed Initial implementation of `thale format` formatter for Thale source code.
-  * Initial implementation of `thale verify` to verify Thale. 
+  * Initial implementation of `thale verify` to verify Thale.
+
+## 0.5.0.0 -- 2025-10-11
+
+* Core Language infrastructure:
+  * Introduced Thale's IR as the foundation for code generation.
+  * Implemented an initial IR optimizer for basic performance improvements.
+  * Error Handling:
+    * Added `Error.hs` for unified error reporting.
+    * Full support for parser and lexer errors with precise line/column reporting.
+  * Parser & Lexer Enhancements
+    * Improved operator and symbol handling for consistent parsing.
+    * Enhanced error messages for unexpected tokens and operator misuse.
+    * Laid groundwork for future features like optional type inference and advanced parsing.
+* Project infrastructure:
+  * Cabal & Build System:
+    * Updated .cabal file to bump version and align dependencies.
+  * Refactored File Structure
+    * CLI commands moved into Cli/Subcommand for modularity.
+    * Internal utilities centralized in Util/ and project configuration logic in Data/.
+* CLI infrastructure:
+  * Updated `Entry.hs`:
+    * Optimized file reading for faster project loading.
+    * Modular CLI command design for easier maintenance and extension.
+    * Each subcommand (Build, Check, Doc, Format, New, Repl, Run, Test, Verify) now resides in its own module.

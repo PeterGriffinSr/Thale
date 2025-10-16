@@ -1,7 +1,6 @@
 module Main (main) where
 
-import Thale.Cli.Cli (runCli)
-import Prelude (IO)
+import Thale.Cli.Entry (runCli)
 
 main :: IO ()
 main = runCli

@@ -1,6 +1,15 @@
-module Thale.Compiler.Token (Token (..)) where
+{-# LANGUAGE LambdaCase #-}
 
-import Prelude
+module Thale.Compiler.Token (Token (..), LocatedToken (..), tokenToString) where
+
+import Prelude (Bool, Char, Double, Eq, Int, Show, String, show)
+
+data LocatedToken = LocatedToken
+  { locLine :: !Int,
+    locCol :: !Int,
+    locTok :: Token
+  }
+  deriving (Show, Eq)
 
 data Token
   = TokenFloat Double
@@ -46,4 +55,27 @@ data Token
   | TokenLogicalOr
   | TokenLogicalAnd
   | TokenArrow
+  | TokenEof
   deriving (Show, Eq)
+
+tokenToString :: Token -> String
+tokenToString = \case
+  TokenPlus -> "+"
+  TokenMinus -> "-"
+  TokenStar -> "*"
+  TokenSlash -> "/"
+  TokenPercent -> "%"
+  TokenEqual -> "="
+  TokenArrow -> "->"
+  TokenPipe -> "|"
+  TokenNotEqual -> "<>"
+  TokenLogicalAnd -> "&&"
+  TokenLogicalOr -> "||"
+  TokenRBrace -> "}"
+  TokenRParen -> ")"
+  TokenRBracket -> "]"
+  TokenLBrace -> "{"
+  TokenLParen -> "("
+  TokenLBracket -> "["
+  TokenEof -> "<EOF>"
+  _ -> show ""

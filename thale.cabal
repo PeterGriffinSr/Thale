@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: thale
-version: 0.4.0.0
+version: 0.5.0.0
 license: MIT
 license-file: LICENSE
 maintainer: codezz-ops@protonmail.com
@@ -23,20 +23,36 @@ source-repository head
 
 library
   exposed-modules:
-    Thale.Cli.Cli
-    Thale.Compiler.Ast
-    Thale.Compiler.Lexer
-    Thale.Compiler.Parser
-    Thale.Compiler.Pretty
+    Thale.Cli.Entry
 
   hs-source-dirs: src
   other-modules:
     Paths_thale
-    Thale.Cli.New
     Thale.Cli.Options
     Thale.Cli.Parser
-    Thale.Cli.Verify
+    Thale.Cli.Subcommand.Build
+    Thale.Cli.Subcommand.Check
+    Thale.Cli.Subcommand.Doc
+    Thale.Cli.Subcommand.Format
+    Thale.Cli.Subcommand.New
+    Thale.Cli.Subcommand.Repl
+    Thale.Cli.Subcommand.Run
+    Thale.Cli.Subcommand.Test
+    Thale.Cli.Subcommand.Verify
+    Thale.Compiler.Ast
+    Thale.Compiler.Error
+    Thale.Compiler.Ir
+    Thale.Compiler.Lexer
+    Thale.Compiler.Optimize
+    Thale.Compiler.Parser
+    Thale.Compiler.Pretty
     Thale.Compiler.Token
+    Thale.Data.ProjectConfig
+    Thale.Data.Toml
+    Thale.Util.BuildHash
+    Thale.Util.Color
+    Thale.Util.Prompt
+    Thale.Util.Source
 
   default-language: Haskell2010
   ghc-options:
@@ -47,8 +63,10 @@ library
   build-depends:
     array,
     base,
+    containers,
     directory,
     filepath,
+    mtl,
     optparse-applicative,
     prettyprinter,
     process,

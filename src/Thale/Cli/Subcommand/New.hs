@@ -1,40 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Thale.Cli.New (runNew, runNewInteractive) where
+module Thale.Cli.Subcommand.New (runNew, runNewInteractive) where
 
 import Control.Monad (when)
 import System.Directory (createDirectory, doesDirectoryExist)
 import System.Exit (die)
 import System.FilePath ((</>))
-import System.IO (hFlush, stdout)
-import Prelude
+import Thale.Data.ProjectConfig (ProjectConfig (..), defaults)
+import Thale.Data.Toml (tomlContent)
+import Thale.Util.Prompt (prompt)
+import Prelude (FilePath, IO, String, mapM_, putStrLn, uncurry, writeFile, ($), (++), (<$>), (<*>))
 
-data ProjectConfig = ProjectConfig
-  { name :: String,
-    version :: String,
-    description :: String,
-    author :: String,
-    license :: String,
-    homepage :: String,
-    repo :: String
-  }
-
-defaults :: ProjectConfig
-defaults =
-  ProjectConfig
-    "my-thale-project"
-    "0.1.0"
-    "A Thale Project"
-    "Your Name <you@example.com>"
-    "MIT"
-    "https://project.com"
-    "https://github.com/project"
-
-prompt :: String -> String -> IO String
-prompt field def = do
-  putStr (field <> " [" <> def <> "]: ") >> hFlush stdout
-  input <- getLine
-  pure (if null input then def else input)
+mainContent :: String
+mainContent = "use std.io\n\nval main() {\n    io.println(\"Hello, Thale!\")\n}\n"
 
 runNewInteractive :: IO ()
 runNewInteractive = do
@@ -69,23 +47,3 @@ createProject cfg = do
 
   mapM_ (uncurry writeFile) files
   putStrLn $ "Created new project in " ++ projectName
-
-mainContent :: String
-mainContent = "use std.io\n\nval main() {\n    io.println(\"Hello, Thale!\")\n}\n"
-
-tomlContent :: ProjectConfig -> String
-tomlContent cfg =
-  unlines
-    [ "[project]",
-      "name = " <> show (name cfg),
-      "version = " <> show (version cfg),
-      "description = " <> show (description cfg),
-      "authors = [" <> show (author cfg) <> "]",
-      "license = " <> show (license cfg),
-      "homepage = " <> show (homepage cfg),
-      "repository = " <> show (repo cfg),
-      "",
-      "[run]",
-      "main = \"src/Main.thl\"",
-      "run = true"
-    ]

@@ -1,8 +1,19 @@
-module Thale.Compiler.Pretty (markRecursive, prettyExpr) where
+{-# LANGUAGE LambdaCase #-}
 
+module Thale.Compiler.Pretty (markRecursive, prettyExpr, prettyIR) where
+
+import Data.Char (toLower)
 import Data.List (intercalate)
 import Thale.Compiler.Ast (Expr (..), Type (..))
-import Prelude
+import Thale.Compiler.Ir
+  ( IRCmpOp (..),
+    IRFunction (..),
+    IRInstr (..),
+    IRLiteral (..),
+    IROp (..),
+    IRProgram (..),
+  )
+import Prelude (Bool (..), Maybe (..), String, any, concatMap, init, last, map, null, replicate, show, (*), (+), (++), (==), (||))
 
 prettyType :: Type -> String
 prettyType TypeFloat = "Float"
@@ -87,13 +98,16 @@ prettyExpr = go 0
         ++ prettyType t
         ++ "\n"
         ++ go (n + 1) e
-    go n (ValDeclTuple names t e) =
+    go n (ValDeclTuple names types e) =
       indent n
         ++ "ValDeclTuple ("
         ++ concatMap (++ ", ") (init names)
         ++ last names
         ++ ") : "
-        ++ prettyType t
+        ++ "("
+        ++ concatMap (\t -> prettyType t ++ ", ") (init types)
+        ++ prettyType (last types)
+        ++ ")"
         ++ "\n"
         ++ go (n + 1) e
     go n (FunDecl name params ret body isRec) =
@@ -140,3 +154,77 @@ prettyExpr = go 0
     go n (UseExpr moduleName) = indent n ++ "Use " ++ moduleName
     go n (Tuple es) =
       indent n ++ "Tuple\n" ++ joinLines (map (go (n + 1)) es)
+
+prettyIR :: IRProgram -> String
+prettyIR (IRProgram funcs) =
+  intercalate "\n\n" (map prettyFunction funcs)
+  where
+    prettyFunction :: IRFunction -> String
+    prettyFunction (IRFunction name params body) =
+      "func "
+        ++ name
+        ++ "("
+        ++ intercalate ", " params
+        ++ ")\n"
+        ++ "  entry:\n"
+        ++ indentBody body
+        ++ "end"
+
+indentBody :: [IRInstr] -> String
+indentBody = go
+  where
+    go [] = ""
+    go (i : is) =
+      case i of
+        IRLabel l ->
+          "  " ++ l ++ ":\n" ++ go is
+        _ ->
+          "    " ++ prettyInstr i ++ "\n" ++ go is
+
+prettyInstr :: IRInstr -> String
+prettyInstr = \case
+  IRLabel l -> l ++ ":"
+  IRConst dst lit -> "const " ++ dst ++ ", " ++ prettyLiteral lit
+  IRMove dst src -> "mov " ++ dst ++ ", " ++ src
+  IRBinOp dst op a b -> prettyOp op ++ " " ++ dst ++ ", " ++ a ++ ", " ++ b
+  IRCmp dst op a b -> prettyCmp op ++ " " ++ dst ++ ", " ++ a ++ ", " ++ b
+  IRCall (Just dst) fn args ->
+    "call " ++ dst ++ ", " ++ fn ++ concatMap (", " ++) args
+  IRCall Nothing fn args ->
+    "call " ++ fn ++ concatMap (", " ++) args
+  IRTailCall fn args ->
+    "tailcall " ++ fn ++ concatMap (", " ++) args
+  IRTuple dst elems ->
+    "tuple " ++ dst ++ concatMap (", " ++) elems
+  IRProj dst src i ->
+    "proj " ++ dst ++ ", " ++ src ++ ", " ++ show i
+  IRJump lbl ->
+    "jmp " ++ lbl
+  IRCondJump cond t f ->
+    "jmp_if_true " ++ cond ++ ", " ++ t ++ ", " ++ f
+  IRReturn Nothing ->
+    "ret"
+  IRReturn (Just val) ->
+    "ret " ++ val
+  IRList dst elems ->
+    "list " ++ dst ++ concatMap (", " ++) elems
+
+prettyLiteral :: IRLiteral -> String
+prettyLiteral = \case
+  LFloat d -> show d
+  LBool b -> map toLower (show b)
+  LChar c -> show c
+  LList elems -> "[" ++ intercalate ", " (map prettyLiteral elems) ++ "]"
+
+prettyOp :: IROp -> String
+prettyOp = \case
+  IRAdd -> "add"
+  IRSub -> "sub"
+  IRMul -> "mul"
+  IRDiv -> "div"
+
+prettyCmp :: IRCmpOp -> String
+prettyCmp = \case
+  IRLt -> "cmp_lt"
+  IRGt -> "cmp_gt"
+  IREq -> "cmp_eq"

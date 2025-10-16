@@ -1,6 +1,6 @@
 module Thale.Compiler.Ast (Type (..), Expr (..)) where
 
-import Prelude
+import Prelude (Bool, Char, Double, Eq, Show, String)
 
 data Type
   = TypeFloat
@@ -32,7 +32,7 @@ data Expr
   | LogicalAnd Expr Expr
   | Assign String Expr
   | ValDecl String Type Expr
-  | ValDeclTuple [String] Type Expr
+  | ValDeclTuple [String] [Type] Expr
   | FunDecl String [(String, Type)] Type Expr Bool
   | PropertyAccess Expr String
   | Call Expr [Expr]
