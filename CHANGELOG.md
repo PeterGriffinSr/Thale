@@ -77,7 +77,7 @@
     * Laid groundwork for future features like optional type inference and advanced parsing.
 * Project infrastructure:
   * Cabal & Build System:
-    * Updated .cabal file to bump version and align dependencies.
+    * Updated `.cabal` file to bump version and align dependencies.
   * Refactored File Structure
     * CLI commands moved into Cli/Subcommand for modularity.
     * Internal utilities centralized in Util/ and project configuration logic in Data/.
@@ -86,3 +86,10 @@
     * Optimized file reading for faster project loading.
     * Modular CLI command design for easier maintenance and extension.
     * Each subcommand (Build, Check, Doc, Format, New, Repl, Run, Test, Verify) now resides in its own module.
+
+## 0.5.1.0 -- 2025-10-16
+
+* Core Language infrastructure:
+  * Patched `head` warning.
+* Project infrastructure:
+  * Updated `.cabal` file to bump version. 

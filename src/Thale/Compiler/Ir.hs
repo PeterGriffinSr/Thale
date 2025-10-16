@@ -188,10 +188,12 @@ lowerExpr _ (ValDecl name _t rhs) = do
   src <- lowerExpr False rhs
   emit $ IRMove name src
   pure name
-lowerExpr _ (ValDeclTuple names _tys rhs) = do
+lowerExpr _ (ValDeclTuple [] _tys _rhs) =
+  error "ValDeclTuple: empty names"
+lowerExpr _ (ValDeclTuple (n : ns) _tys rhs) = do
   src <- lowerExpr False rhs
-  forM_ (zip names [0 ..]) $ \(n, i) -> emit $ IRProj n src i
-  pure $ head names
+  forM_ (zip (n : ns) [0 ..]) $ \(name, i) -> emit $ IRProj name src i
+  pure n
 lowerExpr tailp (Seq xs) = do
   case xs of
     [] -> pure "__unit__"
@@ -311,10 +313,12 @@ lowerStmtTail (ValDecl name _t rhs) = do
   r <- lowerExpr False rhs
   emit $ IRMove name r
   pure (Just r)
-lowerStmtTail (ValDeclTuple names _tys rhs) = do
+lowerStmtTail (ValDeclTuple [] _tys _rhs) =
+  error "ValDeclTuple: empty names"
+lowerStmtTail (ValDeclTuple (n : ns) _tys rhs) = do
   r <- lowerExpr False rhs
-  forM_ (zip names [0 ..]) $ \(n, i) -> emit $ IRProj n r i
-  pure (Just $ head names)
+  forM_ (zip (n : ns) [0 ..]) $ \(name, i) -> emit $ IRProj name r i
+  pure (Just n)
 lowerStmtTail (Match scr arms) = do
   t <- lowerMatch True scr arms
   pure (Just t)
