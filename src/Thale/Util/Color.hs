@@ -6,7 +6,7 @@ module Thale.Util.Color (enableVirtualTerminal, Color (..), colorize) where
 import Foreign
 import Foreign.C.Types
 
-foreign import ccall "GetStdHandle"e
+foreign import ccall "GetStdHandle"
     c_GetStdHandle :: CInt -> IO CInt
 
 foreign import ccall "GetConsoleMode"

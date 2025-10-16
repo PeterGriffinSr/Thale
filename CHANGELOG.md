@@ -93,3 +93,11 @@
   * Patched `head` warning.
 * Project infrastructure:
   * Updated `.cabal` file to bump version. 
+
+## 0.5.2.0 -- 2025-10-16
+
+* Core Language infrastructure:
+  * Fixed Windows `foreign import ccall` syntax in `Thale.Util.Color` (`c_GetStdHandle`).
+  * Patched `head` warnings in `Thale.Compiler.Ir` to avoid partial functions.
+* Project infrastructure:
+  * Bumped version to 0.5.2.0 in `.cabal` file.
