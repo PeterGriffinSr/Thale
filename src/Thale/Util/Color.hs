@@ -3,9 +3,6 @@
 module Thale.Util.Color (enableVirtualTerminal, Color (..), colorize) where
 
 #ifdef mingw32_HOST_OS
-import Foreign
-import Foreign.C.Types
-
 foreign import ccall "GetStdHandle"
     c_GetStdHandle :: CInt -> IO CInt
 

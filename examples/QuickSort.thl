@@ -1,0 +1,24 @@
+effect Console { print : String -> () }
+
+partition : (a -> Bool) -> [a] -> ([a], [a])
+partition pred [] -> ([], [])
+partition pred (x :: xs) ->
+    let (ts, fs) = partition pred xs
+    if pred x then (x :: ts, fs) else (ts, x :: fs)
+
+sortBy : (a -> a -> Bool) -> [a] -> [a]
+sortBy cmp [] -> []
+sortBy cmp (x :: xs) ->
+    let (smaller, larger) = partition (\y -> cmp y x) xs
+    sortBy cmp smaller ++ [x] ++ sortBy cmp larger
+
+qsort : [a] -> [a]
+qsort xs ->
+    sortBy (\a b -> a <= b) xs
+
+main : Effect ()
+main -> do
+    [5, 2, 9, 1, 7]
+    |> qsort
+    |> show
+    |> Console.print

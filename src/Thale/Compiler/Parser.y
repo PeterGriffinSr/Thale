@@ -13,26 +13,26 @@ import Thale.Compiler.Error (printParseError)
 %error { printParseError }
 
 %token
+  intType { LocatedToken _ _ TokenIntType }
   floatType { LocatedToken _ _ TokenFloatType }
   charType { LocatedToken _ _ TokenCharType }
   unitType { LocatedToken _ _ TokenUnitType }
   listType { LocatedToken _ _ TokenListType }
   boolType { LocatedToken _ _ TokenBoolType }
+  
   ident { LocatedToken _ _ (TokenIdentifier $$) }
-  float { LocatedToken _ _ (TokenFloat $$) }
-  char { LocatedToken _ _ (TokenChar $$) }
-  string { LocatedToken _ _ (TokenString $$) }
-  bool { LocatedToken _ _ (TokenBool $$) }
+  intlit { LocatedToken __ (TokenInt $$) }
+  floatlit { LocatedToken _ _ (TokenFloat $$) }
+  charlit { LocatedToken _ _ (TokenChar $$) }
+  stringlit { LocatedToken _ _ (TokenString $$) }
+  boollit { LocatedToken _ _ (TokenBool $$) }
+
   lparen { LocatedToken _ _ TokenLParen }
   rparen { LocatedToken _ _ TokenRParen }
   lbrace { LocatedToken _ _ TokenLBrace }
   rbrace { LocatedToken _ _ TokenRBrace }
   lbracket { LocatedToken _ _ TokenLBracket }
   rbracket { LocatedToken _ _ TokenRBracket }
-  val { LocatedToken _ _ TokenVal }
-  use { LocatedToken _ _ TokenUse }
-  match { LocatedToken _ _ TokenMatch }
-  with { LocatedToken _ _ TokenWith }
   colon { LocatedToken _ _ TokenColon }
   comma { LocatedToken _ _ TokenComma }
   semicolon { LocatedToken _ _ TokenSemicolon }
@@ -53,6 +53,17 @@ import Thale.Compiler.Error (printParseError)
   bang { LocatedToken _ _ TokenBang }
   logicalor { LocatedToken _ _ TokenLogicalOr }
   logicaland { LocatedToken _ _ TokenLogicalAnd }
+  consop { LocatedToken _ _ TokenConsOp }
+
+  letkw { LocatedToken _ _ TokenLet }
+  reckw { LocatedToken _ _ TokenRec }
+  matchkw { LocatedToken _ _ TokenMatch }
+  withkw { LocatedToken _ _ TokenWith }
+  effectkw { LocatedToken _ _ TokenEffect }
+  dokw { LocatedToken _ _ TokenDo }
+  ifkw { LocatedToken _ _ TokenIf }
+  thenkw { LocatedToken _ _ TokenThen }
+  elsekw { LocatedToken _ _ TokenElse }
 
 %right equal
 %left logicalor
@@ -66,21 +77,29 @@ import Thale.Compiler.Error (printParseError)
 %%
 
 Program :: { Expr }
-Program : TopLevelExprList { markRecursive (Seq $1) }
+Program : TopLevelList { markRecursive (Seq $1) }
 
-TopLevelExprList :: { [Expr] }
-TopLevelExprList : TopLevelExpr TopLevelExprList { $1 : $2 }
-    | TopLevelExpr { [$1] }
+TopLevelList :: { [Expr] }
+TopLevelList : TopLevel TopLevelList { $1 : $2 }
+  | TopLevel { [$1] }
 
-TopLevelExpr :: { Expr }
-TopLevelExpr : use ModulePath { UseExpr $2 } 
-    | val ident lparen Params rparen arrow TypeTok lbrace ExprList rbrace { FunDecl $2 $4 $7 (Seq $9) False }
-    | val ident lparen Params rparen lbrace ExprList rbrace { FunDecl $2 $4 TypeInfer (Seq $7) False }
-    | Expr { $1 }
+TopLevel :: { Expr }
+TopLevel : EffectDecl { $1 }
+         | TypeDecl { $1 }
+         | FunDeclGroup { $1 }
+         | Expr { $1 }
 
-ModulePath :: { String }
-ModulePath : ident dot ModulePath { $1 ++ "." ++ $3 }
-           | ident { $1 }
+EffectDecl :: { Expr }
+EffectDecl : effectkw ident lbrace EffectMembers rbrace { EffectDecl $2 $4 }
+
+EffectMembers :: { [(String, Type)] }
+EffectMembers : EffectMember comma EffectMembers { $1 : $3 }
+              | EffectMember { [$1] }
+              | { [] }
+
+EffectMember :: { (String, Type) }
+EffectMember
+  : ident colon TypeSig { ($1, $3) }
 
 ExprList :: { [Expr] }
 ExprList : Expr ExprList { $1 : $2 }

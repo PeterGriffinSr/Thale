@@ -16,11 +16,11 @@ import Prelude (Bool (..), Char, Either (..), Eq, IO, Maybe (..), Ord, Show, Str
 tokens :-
 
     $white+ ;
-    "#".* ;
+    "--".* ;
     "#*" (.| \n )* "*#" ;
 
     [0-9]+"."[0-9]+ { \pos s -> LocatedToken (alexLine pos) (alexColumn pos) (TokenFloat (read s)) }
-    [0-9]+ { \pos s -> LocatedToken (alexLine pos) (alexColumn pos) (TokenFloat (read s)) }
+    [0-9]+ { \pos s -> LocatedToken (alexLine pos) (alexColumn pos) (TokenInt (read s)) }
     \"([^\\\"]|\\[nrt\\\"\'])*\" {
         \pos s -> LocatedToken (alexLine pos) (alexColumn pos) (TokenString (read s))
     }
@@ -51,18 +51,18 @@ tokens :-
     [a-zA-Z][a-zA-Z0-9\'_]* {
         \pos s ->
           let tok = case s of
-                "val"   -> TokenVal
+                "let"   -> TokenLet
                 "type"  -> TokenType
-                "use"   -> TokenUse
                 "match" -> TokenMatch
                 "with"  -> TokenWith
+                "Int"   -> TokenIntType
                 "Float" -> TokenFloatType
                 "Char"  -> TokenCharType
                 "Unit"  -> TokenUnitType
                 "Bool"  -> TokenBoolType
                 "List"  -> TokenListType
-                "True"  -> TokenBool True
-                "False" -> TokenBool False
+                "true"  -> TokenBool True
+                "false" -> TokenBool False
                 _       -> TokenIdentifier s
           in LocatedToken (alexLine pos) (alexColumn pos) tok
     }
@@ -93,6 +93,7 @@ tokens :-
     "||" { \pos _ -> LocatedToken (alexLine pos) (alexColumn pos) TokenLogicalOr }
     "&&" { \pos _ -> LocatedToken (alexLine pos) (alexColumn pos) TokenLogicalAnd }
     "->" { \pos _ -> LocatedToken (alexLine pos) (alexColumn pos) TokenArrow }
+    "::" { \pos _ -> LocatedToken (alexLine pos) (alexColumn pos) TokenConsOp }
 
     . {
         \pos s ->

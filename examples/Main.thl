@@ -1,5 +1,4 @@
-use std.io
+effect Console { print : String -> () }
 
-val main() {
-    io.println("Hello, world")
-}
+main : Effect ()
+main -> Console.print "Hello, world!"

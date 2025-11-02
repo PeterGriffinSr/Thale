@@ -12,11 +12,4 @@ data ProjectConfig = ProjectConfig
 
 defaults :: ProjectConfig
 defaults =
-  ProjectConfig
-    "my-thale-project"
-    "0.1.0"
-    "A Thale Project"
-    "Your Name <you@example.com>"
-    "MIT"
-    "https://project.com"
-    "https://github.com/project"
+  ProjectConfig {name = "my-thale-project", version = "0.1.0", description = "A Thale Project", author = "Your Name <you@example.com>", license = "MIT", homepage = "https://project.com", repo = "https://github.com/project"}

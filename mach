@@ -1,0 +1,560 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import platform
+from pathlib import Path
+import traceback
+from typing import Any, Dict, List, Optional, Tuple
+import zipfile
+from enum import IntEnum
+
+class ExitCode(IntEnum):
+    OK = 0
+    GENERAL_ERROR = 1
+    PERMISSION_DENIED = 2
+    FILE_NOT_FOUND = 3
+    INVALID_ARGUMENT = 4
+    SUBPROCESS_FAILED = 10
+    NETWORK_ERROR = 20
+    ZIP_ERROR = 21
+    ENVIRONMENT_ERROR = 30
+    CACHE_ERROR = 40
+    INSTALL_ERROR = 50
+    UNINSTALL_ERROR = 51
+    CLEAN_ERROR = 52
+    UNKNOWN_ERROR = 99
+
+ROOT = Path(__file__).resolve().parent
+HOME = Path.home()
+GLOBAL_DIR = HOME / ".thale"
+BIN_DIR = GLOBAL_DIR / "bin"
+CACHE_DIR = GLOBAL_DIR / "cache"
+CACHE_FILE = CACHE_DIR / "buildcache.json"
+DEFAULT_COMPILER_EXE = "thale"
+TMP_DIR = GLOBAL_DIR / "tmp"
+ENV_DIR = TMP_DIR / "env"
+SRC_DIR = TMP_DIR / "Thale"
+VENV_DIR = TMP_DIR / "pyenv"
+
+def log(msg: str, kind: str = "info") -> None:
+    COLORS = {
+        "info": "\033[1;34m",
+        "ok": "\033[1;32m",
+        "warn": "\033[1;33m",
+        "err": "\033[1;31m",
+        "reset": "\033[0m",
+    }
+    color = COLORS.get(kind, "")
+    reset = COLORS["reset"]
+    print(f"{color}[{kind}] {msg}{reset}")
+
+def fatal(msg: str, code: ExitCode = ExitCode.GENERAL_ERROR):
+    print(f"error: {msg}", file=sys.stderr)
+    sys.exit(int(code))
+
+def safe_op(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except KeyboardInterrupt:
+            fatal("Operation cancelled by user.", ExitCode.GENERAL_ERROR)
+        except FileNotFoundError as e:
+            fatal(f"File not found: {e.filename or e}", ExitCode.FILE_NOT_FOUND)
+        except PermissionError as e:
+            fatal(f"Permission denied: {e.filename or e}", ExitCode.PERMISSION_DENIED)
+        except json.JSONDecodeError as e:
+            fatal(f"Invalid JSON in cache file ({CACHE_FILE}): {e}", ExitCode.CACHE_ERROR)
+        except subprocess.CalledProcessError as e:
+            fatal(f"Subprocess failed (exit {e.returncode}): {e.cmd}", ExitCode.SUBPROCESS_FAILED)
+        except subprocess.SubprocessError as e:
+            fatal(f"Subprocess error: {e}", ExitCode.SUBPROCESS_FAILED)
+        except zipfile.BadZipFile:
+            fatal("Corrupted or invalid zip archive during extraction.", ExitCode.ZIP_ERROR)
+        except OSError as e:
+            fatal(f"System error: {e.strerror or e}", ExitCode.ENVIRONMENT_ERROR)
+        except Exception:
+            log("An unexpected error occurred:", "err")
+            traceback.print_exc()
+            sys.exit(int(ExitCode.UNKNOWN_ERROR))
+    return wrapper
+
+def run(cmd: List[str], cwd: Optional[Path] = None, capture: bool = False) -> Tuple[int, str]:
+    try:
+        proc = subprocess.run(
+            cmd, cwd=cwd, text=True,
+            stdout=subprocess.PIPE if capture else None,
+            stderr=subprocess.STDOUT if capture else None,
+            check=False,
+        )
+        return proc.returncode, proc.stdout if capture else ""
+    except FileNotFoundError:
+        return 127, f"Command not found: {cmd[0]}"
+    except Exception as e:
+        return 1, f"Error executing {cmd}: {e}"
+
+def sha256_of_file(path: Path) -> str:
+    if not path.exists():
+        raise FileNotFoundError(path)
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+def load_cache() -> Dict[str, Any]:
+    if not CACHE_FILE.exists():
+        return {"files": {}, "compiler_hash": None, "version": None, "arch": None}
+    try:
+        return json.loads(CACHE_FILE.read_text())
+    except Exception as e:
+        log(f"Failed to load cache ({e}). Resetting cache.", "warn")
+        return {"files": {}, "compiler_hash": None, "version": None, "arch": None}
+
+def save_cache(cache: Dict[str, Any]) -> None:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        CACHE_FILE.write_text(json.dumps(cache, indent=2))
+    except Exception as e:
+        fatal(f"Failed to save cache file: {e}")
+
+def have(tool: str) -> bool:
+    return shutil.which(tool) is not None
+
+@safe_op
+def verify_cache() -> bool:
+    cache = load_cache()
+    valid = True
+
+    compiler_path = BIN_DIR / DEFAULT_COMPILER_EXE
+    if compiler_path.exists():
+        try:
+            actual_hash = sha256_of_file(compiler_path)
+        except Exception as e:
+            log(f"Failed to read compiler for hash: {e}", "warn")
+            valid = False
+        else:
+            if actual_hash != cache.get("compiler_hash"):
+                log(f"Compiler hash mismatch: cache={cache.get('compiler_hash')[:12]} actual={actual_hash[:12]}", "warn")
+                valid = False
+    else:
+        log(f"Compiler not found at {compiler_path}", "warn")
+        valid = False
+
+    cached_arch = cache.get("arch")
+    actual_arch = platform.machine()
+    if cached_arch != actual_arch:
+        log(f"Architecture mismatch: cache={cached_arch} actual={actual_arch}", "warn")
+        valid = False
+
+    for file, expected_hash in cache.get("files", {}).items():
+        path = Path(file)
+        if not path.exists():
+            log(f"Missing cached file: {file}", "warn")
+            valid = False
+        else:
+            try:
+                actual = sha256_of_file(path)
+                if actual != expected_hash:
+                    log(f"Hash mismatch for {file}", "warn")
+                    valid = False
+            except Exception as e:
+                log(f"Error validating cache file {file}: {e}", "warn")
+                valid = False
+
+    return valid
+
+def find_built_compiler() -> Optional[Path]:
+    dist = ROOT / "dist-newstyle"
+    if not dist.exists():
+        return None
+    for p in dist.rglob(DEFAULT_COMPILER_EXE):
+        if p.is_file() and os.access(p, os.X_OK):
+            return p
+    return None
+
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+def _get_shell_rc_file() -> Optional[Path]:
+    shell = os.environ.get("SHELL", "")
+    if "zsh" in shell:
+        return HOME / ".zshrc"
+    elif "bash" in shell:
+        return HOME / ".bashrc"
+    elif "fish" in shell:
+        return HOME / ".config" / "fish" / "config.fish"
+    return HOME / ".profile"
+
+def _path_line() -> str:
+    if "fish" in os.environ.get("SHELL", ""):
+        return f"set -x PATH {BIN_DIR} $PATH"
+    return f'export PATH="$PATH:{BIN_DIR}"'
+
+def _path_exists_in_file(rc_path: Path) -> bool:
+    return rc_path.exists() and str(BIN_DIR) in rc_path.read_text(errors="ignore")
+
+@safe_op
+def _append_path_to_rc() -> None:
+    if _is_windows():
+        try:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0, winreg.KEY_SET_VALUE)
+            path = os.environ.get("PATH", "")
+            if str(BIN_DIR) not in path:
+                winreg.SetValueEx(key, "PATH", 0, winreg.REG_EXPAND_SZ, f"{path};{BIN_DIR}")
+                winreg.CloseKey(key)
+                log("Added ~/.thale/bin to PATH (Windows registry updated).", "ok")
+        except Exception as e:
+            log(f"Failed to modify PATH on Windows: {e}", "warn")
+    else:
+        rc_file = _get_shell_rc_file()
+        try:
+            if not _path_exists_in_file(rc_file):
+                rc_file.parent.mkdir(parents=True, exist_ok=True)
+                rc_file.write_text(
+                    rc_file.read_text() + f"\n# Added by Thale build tool\n{_path_line()}\n"
+                    if rc_file.exists()
+                    else f"# Added by Thale build tool\n{_path_line()}\n"
+                )
+                log(f"Appended PATH modification to {rc_file}", "ok")
+        except Exception as e:
+            log(f"Failed to modify rc file {rc_file}: {e}", "warn")
+
+def cmd_bootstrap(_: argparse.Namespace) -> None:
+    log("Bootstrapping isolated Thale build environment...", "info")
+
+    TMP_DIR.mkdir(parents=True, exist_ok=True)
+    ENV_DIR.mkdir(parents=True, exist_ok=True)
+
+    if not VENV_DIR.exists():
+        log("Creating Python virtual environment...", "info")
+        rc, out = run([sys.executable, "-m", "venv", str(VENV_DIR)], capture=True)
+        print(out)
+        if rc != 0:
+            fatal("Failed to create Python virtual environment.", ExitCode.ENVIRONMENT_ERROR)
+    else:
+        log("Python virtual environment already exists.", "ok")
+
+    venv_bin = VENV_DIR / ("Scripts" if _is_windows() else "bin")
+    python_in_venv = venv_bin / "python"
+
+    log("Upgrading pip inside virtual environment...", "info")
+    rc, out = run([str(python_in_venv), "-m", "pip", "install", "--upgrade", "pip"], capture=True)
+    print(out)
+
+    ghcup_bin = ENV_DIR / "bin" / "ghcup"
+    if not ghcup_bin.exists():
+        log("Installing GHCup inside isolated environment...", "info")
+        rc, out = run([
+            "bash", "-c",
+            f"curl -sSL https://get-ghcup.haskell.org | "
+            f"BOOTSTRAP_HASKELL_NONINTERACTIVE=1 GHCUP_INSTALL_BASE_PREFIX={ENV_DIR} sh"
+        ], capture=True)
+        print(out)
+        if rc != 0:
+            fatal("Failed to install GHCup.", ExitCode.INSTALL_ERROR)
+    else:
+        log("GHCup already installed in local environment.", "ok")
+
+    os.environ["PATH"] = f"{ENV_DIR / 'bin'}:{venv_bin}:{os.environ['PATH']}"
+    os.environ["GHCUP_INSTALL_BASE_PREFIX"] = str(ENV_DIR)
+    os.environ["CABAL_DIR"] = str(ENV_DIR / "cabal")
+    os.environ["CABAL_CONFIG"] = str(ENV_DIR / "cabal" / "config")
+
+    tools = [
+        ("ghc", ["ghcup", "install", "ghc", "recommended", "--set"]),
+        ("cabal", ["ghcup", "install", "cabal", "latest", "--set"]),
+        ("alex", ["cabal", "install", "alex"]),
+        ("happy", ["cabal", "install", "happy"]),
+    ]
+
+    run(["cabal", "update"], capture=True)
+
+    for name, cmd in tools:
+        log(f"Installing {name} via GHCup...", "info")
+        rc, out = run(cmd, capture=True)
+        print(out)
+        if rc != 0:
+            fatal(f"Failed to install {name}.", ExitCode.INSTALL_ERROR)
+
+    if not SRC_DIR.exists():
+        log("Cloning Thale repository...", "info")
+        rc, out = run(["git", "clone", "https://github.com/PeterGriffinSr/Thale.git", str(SRC_DIR)], capture=True)
+        print(out)
+        if rc != 0:
+            fatal("Failed to clone repository.", ExitCode.NETWORK_ERROR)
+    else:
+        log("Updating Thale repository...", "info")
+        rc, out = run(["git", "pull"], cwd=SRC_DIR, capture=True)
+        print(out)
+
+    log("Building compiler inside virtual environment...", "info")
+    rc, out = run(["cabal", "update"], cwd=SRC_DIR, capture=True)
+    print(out)
+    if rc != 0:
+        fatal("Failed to update package list.", ExitCode.SUBPROCESS_FAILED)
+
+    rc, out = run(["cabal", "build"], cwd=SRC_DIR, capture=True)
+    print(out)
+    if rc != 0:
+        fatal("Build failed.", ExitCode.SUBPROCESS_FAILED)
+
+    log("Bootstrap completed successfully. Run './mach install' to install the compiler.", "ok")
+
+@safe_op
+def generate_build_cache(compiler_path: Path) -> None:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    compiler_hash = sha256_of_file(compiler_path)
+    version = subprocess.getoutput(f"{compiler_path} version").strip()
+    arch = platform.machine()
+
+    cache = {
+        "compiler_hash": compiler_hash,
+        "version": version,
+        "arch": arch,
+        "files": {str(compiler_path): compiler_hash},
+    }
+    save_cache(cache)
+    log(f"Build cache generated for compiler {version} ({arch})", "ok")
+
+@safe_op
+def build_haskell_compiler(jobs: List[str] = []) -> bool:
+    log("Running: cabal update && cabal build", "info")
+    if not have("cabal"):
+        fatal("Cabal not found. Please install it or build manually.", 10)
+
+    rc, out = run(["cabal", "update"], cwd=ROOT, capture=True)
+    if rc != 0:
+        fatal("Failed to update Cabal package list.", rc)
+    rc, out = run(["cabal", "build"] + jobs, cwd=ROOT, capture=True)
+    print(out)
+    if rc != 0:
+        fatal("Build failed. See above logs for details.", rc)
+
+    compiler_path = find_built_compiler()
+    if compiler_path:
+        generate_build_cache(compiler_path)
+    else:
+        log("Built compiler not found after build.", "warn")
+
+    return True
+
+@safe_op
+def cmd_build(args: argparse.Namespace) -> None:
+    jobs_arg = [f"-j{args.jobs}"] if args.jobs > 1 else []
+    log(f"Building Haskell compiler with {args.jobs} job(s)...", "info")
+    if build_haskell_compiler(jobs_arg):
+        log("Build completed successfully.", "ok")
+
+def cmd_install(_: argparse.Namespace) -> None:
+    compiler = None
+    tmp_build = SRC_DIR / "dist-newstyle"
+    if tmp_build.exists():
+        for p in tmp_build.rglob(DEFAULT_COMPILER_EXE):
+            if p.is_file() and os.access(p, os.X_OK):
+                compiler = p
+                break
+
+    if not compiler:
+        fatal("No built compiler found in ~/.thale/tmp/Thale. Run './mach bootstrap' first.", ExitCode.FILE_NOT_FOUND)
+
+@safe_op
+def cmd_uninstall(_: argparse.Namespace) -> None:
+    dest = BIN_DIR / DEFAULT_COMPILER_EXE
+    if dest.exists():
+        dest.unlink()
+        log(f"Removed {dest}", "ok")
+    else:
+        log("Compiler not found in ~/.thale/bin", "warn")
+
+    try:
+        if not _is_windows():
+            rc_file = _get_shell_rc_file()
+            if rc_file.exists():
+                lines = rc_file.read_text().splitlines()
+                new_lines = [l for l in lines if str(BIN_DIR) not in l and "Added by Thale build tool" not in l]
+                rc_file.write_text("\n".join(new_lines) + "\n")
+                log(f"Removed PATH entry from {rc_file}", "ok")
+        else:
+            import winreg
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0, winreg.KEY_SET_VALUE)
+            path = os.environ.get("PATH", "")
+            if str(BIN_DIR) in path:
+                new_path = ";".join([p for p in path.split(";") if str(BIN_DIR) not in p])
+                winreg.SetValueEx(key, "PATH", 0, winreg.REG_EXPAND_SZ, new_path)
+                winreg.CloseKey(key)
+                log("Removed ~/.thale/bin from PATH (Windows registry updated).", "ok")
+    except Exception as e:
+        log(f"Failed to remove PATH entry: {e}", "warn")
+
+@safe_op
+def cmd_status(args: argparse.Namespace) -> None:
+    cache_valid = verify_cache()
+    cache = load_cache()
+    data = {
+        "os": platform.platform(),
+        "compiler_path": str(BIN_DIR / DEFAULT_COMPILER_EXE),
+        "compiler_hash": cache.get("compiler_hash"),
+        "compiler_arch": cache.get("arch"),
+        "version": cache.get("version"),
+        "cache_valid": cache_valid,
+        "has_cache": CACHE_FILE.exists(),
+        "tools": {t: shutil.which(t) or None for t in ["ghc", "cabal", "alex", "happy"]},
+    }
+
+    if args.json:
+        print(json.dumps(data, indent=2))
+        return
+
+    log("Environment status:", "info")
+    print(f"  OS: {data['os']}")
+    print(f"  Compiler version: {data['version'] or 'unknown'}")
+    print(f"  Architecture: {data['compiler_arch']}")
+    print(f"  Cache: {'exists' if data['has_cache'] else 'missing'}")
+    print(f"  SHA256: {data['compiler_hash'][:12] if data['compiler_hash'] else 'N/A'}")
+
+    print("\n[ Tools ]")
+    for tool, path in data["tools"].items():
+        print(f"  {tool:<6} -> {'found' if path else 'missing'}")
+
+@safe_op
+def cmd_update(args: argparse.Namespace) -> None:
+    log("Checking for source changes...", "info")
+    compiler = find_built_compiler()
+    cache = load_cache()
+    jobs_arg = [f"-j{args.jobs}"] if hasattr(args, "jobs") and args.jobs > 1 else []
+    if not compiler:
+        log("No built compiler found. Running full build.", "warn")
+        build_haskell_compiler(jobs_arg)
+        cmd_install(args)
+        return
+    try:
+        new_hash = sha256_of_file(compiler)
+    except Exception as e:
+        fatal(f"Failed to compute compiler hash: {e}", 30)
+    if cache.get("compiler_hash") != new_hash:
+        log("Source changed — rebuilding...", "info")
+        build_haskell_compiler(jobs_arg)
+        cmd_install(args)
+    else:
+        log("Compiler up-to-date. No rebuild needed.", "ok")
+
+@safe_op
+def cmd_doctor(_: argparse.Namespace) -> None:
+    log("Running diagnostics...", "info")
+    issues = []
+    if not have("cabal"):
+        issues.append("Missing cabal.")
+    if not (BIN_DIR / DEFAULT_COMPILER_EXE).exists():
+        issues.append("Thale compiler not installed.")
+    if CACHE_FILE.exists() and CACHE_FILE.stat().st_size == 0:
+        issues.append("Empty or corrupted cache file.")
+    if not issues:
+        log("All systems nominal.", "ok")
+    else:
+        for i in issues:
+            log(i, "warn")
+
+@safe_op
+def cmd_clean(args: argparse.Namespace) -> None:
+    log("Cleaning build artifacts...", "info")
+    removed = []
+    for d in ["dist-newstyle", "dist", "build"]:
+        path = ROOT / d
+        if path.exists():
+            try:
+                shutil.rmtree(path)
+                removed.append(d)
+            except Exception as e:
+                log(f"Failed to remove {d}: {e}", "warn")
+    if args.all:
+        try:
+            shutil.rmtree(GLOBAL_DIR, ignore_errors=True)
+            removed.append("~/.thale (global cache)")
+        except Exception as e:
+            log(f"Failed to remove global cache: {e}", "warn")
+    log(f"Removed: {', '.join(removed)}", "ok" if removed else "info")
+
+@safe_op
+def cmd_pull(_: argparse.Namespace) -> None:
+    if have("git") and (ROOT / ".git").exists():
+        rc, out = run(["git", "pull"], cwd=ROOT, capture=True)
+        print(out)
+        if rc == 0:
+            log("Repository updated successfully via Git.", "ok")
+        else:
+            fatal("Failed to update repository via Git.", rc)
+        return
+
+    log("Git not found or not a git repo. Attempting to download latest sources...", "warn")
+
+    archive_url = "https://github.com/PeterGriffinSr/Thale/archive/refs/heads/main.zip"
+    tmp_file = GLOBAL_DIR / "thale_latest.zip"
+
+    downloader = None
+    if have("curl"):
+        downloader = ["curl", "-L", "-o", str(tmp_file), archive_url]
+    elif have("wget"):
+        downloader = ["wget", "-O", str(tmp_file), archive_url]
+
+    if not downloader:
+        fatal("Neither Git, curl, nor wget found. Cannot update automatically.", 40)
+
+    log(f"Downloading latest Thale sources from {archive_url}...", "info")
+    rc, out = run(downloader, capture=True)
+    print(out)
+    if rc != 0:
+        fatal("Failed to download sources.", rc)
+
+    try:
+        with zipfile.ZipFile(tmp_file, "r") as zip_ref:
+            zip_ref.extractall(ROOT.parent)
+        tmp_file.unlink(missing_ok=True)
+        log("Downloaded and extracted latest Thale sources.", "ok")
+        log("You may need to rebuild the compiler with './mach build'.", "info")
+    except zipfile.BadZipFile:
+        fatal("Downloaded archive is corrupted. Try again later.", 41)
+
+def main():
+    parser = argparse.ArgumentParser(description="Mach build tool for Thale")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    sub.add_parser("bootstrap", help="Check or install dependencies")
+    p_build = sub.add_parser("build", help="Build the Haskell compiler")
+    p_build.add_argument("-j", "--jobs", type=int, default=1, help="Number of parallel jobs to use during build (default: 1)")
+    sub.add_parser("install", help="Install the compiler into ~/.thale/bin")
+    sub.add_parser("update", help="Rebuild only if sources changed")
+    sub.add_parser("uninstall", help="Remove compiler and PATH changes")
+
+    p_status = sub.add_parser("status", help="Show environment and compiler status")
+    p_status.add_argument("--json", action="store_true", help="Output JSON")
+
+    sub.add_parser("doctor", help="Run system diagnostics")
+    sub.add_parser("pull", help="Update Thale source")
+
+    p_clean = sub.add_parser("clean", help="Remove build artifacts")
+    p_clean.add_argument("--all", action="store_true", help="Also remove ~/.thale")
+
+    args = parser.parse_args()
+    cmds = {
+        "bootstrap": cmd_bootstrap,
+        "build": cmd_build,
+        "install": cmd_install,
+        "uninstall": cmd_uninstall,
+        "update": cmd_update,
+        "status": cmd_status,
+        "doctor": cmd_doctor,
+        "clean": cmd_clean,
+        "pull": cmd_pull
+    }
+    cmds[args.cmd](args)
+
+if __name__ == "__main__":
+    main()

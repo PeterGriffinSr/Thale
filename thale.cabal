@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: thale
-version: 0.5.2.0
+version: 0.5.2.1
 license: MIT
 license-file: LICENSE
 maintainer: codezz-ops@protonmail.com
@@ -61,8 +61,10 @@ library
     -Werror
 
   build-depends:
+    aeson,
     array,
     base,
+    bytestring,
     containers,
     directory,
     filepath,

@@ -1,0 +1,23 @@
+effect Console { print : String -> () }
+
+swap : List<Int> -> List<Int>
+swap xs ->
+    match xs with
+    | [] -> []
+    | [x] -> [x]
+    | x :: y :: rest ->
+        if x > y then y :: swap (x :: rest)
+        else x :: swap (y :: rest)
+
+bubble : Int -> List<Int> -> List<Int>
+bubble n xs ->
+    match n with
+    | 0 -> xs
+    | _ -> bubble (n - 1) (swap xs)
+
+main : Effect ()
+main -> 
+    let xs = [5, 3, 1, 4, 2]
+        sorted = bubble (length xs) xs
+    in
+    Console.print (show sorted)

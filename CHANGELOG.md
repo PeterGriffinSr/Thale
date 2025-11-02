@@ -79,13 +79,13 @@
   * Cabal & Build System:
     * Updated `.cabal` file to bump version and align dependencies.
   * Refactored File Structure
-    * CLI commands moved into Cli/Subcommand for modularity.
-    * Internal utilities centralized in Util/ and project configuration logic in Data/.
+    * CLI commands moved into `Cli/Subcommand` for modularity.
+    * Internal utilities centralized in `Util/` and project configuration logic in `Data/`.
 * CLI infrastructure:
   * Updated `Entry.hs`:
     * Optimized file reading for faster project loading.
     * Modular CLI command design for easier maintenance and extension.
-    * Each subcommand (Build, Check, Doc, Format, New, Repl, Run, Test, Verify) now resides in its own module.
+    * Each subcommand (`Build`, `Check`, `Doc`, `Format`, `New`, `Repl`, `Run`, `Test`, `Verify`) now resides in its own module.
 
 ## 0.5.1.0 -- 2025-10-16
 
@@ -101,3 +101,7 @@
   * Patched `head` warnings in `Thale.Compiler.Ir` to avoid partial functions.
 * Project infrastructure:
   * Bumped version to 0.5.2.0 in `.cabal` file.
+
+## 0.5.2.1 -- 2025-10-16
+* Project infrastructure:
+  * Revised **CHANGELOG**.

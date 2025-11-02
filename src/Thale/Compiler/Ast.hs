@@ -1,10 +1,12 @@
 module Thale.Compiler.Ast (Type (..), Expr (..)) where
 
-import Prelude (Bool, Char, Double, Eq, Show, String)
+import Prelude (Bool, Char, Double, Eq, Int, Show, String)
 
 data Type
-  = TypeFloat
+  = TypeInt
+  | TypeFloat
   | TypeChar
+  | TypeString
   | TypeUnit
   | TypeList Type
   | TypeBool
@@ -13,8 +15,10 @@ data Type
   deriving (Eq, Show)
 
 data Expr
-  = FloatLit Double
+  = IntLit Int
+  | FloatLit Double
   | CharLit Char
+  | StringLit String
   | ListLit [Expr]
   | BoolLit Bool
   | Var String
@@ -31,14 +35,13 @@ data Expr
   | LogicalOr Expr Expr
   | LogicalAnd Expr Expr
   | Assign String Expr
-  | ValDecl String Type Expr
-  | ValDeclTuple [String] [Type] Expr
+  | LetDecl String Type Expr
+  | LetDeclTuple [String] [Type] Expr
   | FunDecl String [(String, Type)] Type Expr Bool
   | PropertyAccess Expr String
   | Call Expr [Expr]
   | Match Expr [(Expr, Expr)]
   | Wildcard
   | Seq [Expr]
-  | UseExpr String
   | Tuple [Expr]
   deriving (Eq, Show)

@@ -1,0 +1,21 @@
+effect Console { print : String -> () }
+
+smallestFactor : Int -> Int -> Int
+smallestFactor n i ->
+    if i * i > n then n
+    else if n % i == 0 then i
+    else smallestFactor n (i + 1)
+
+primeFactors : Int -> [Int]
+primeFactors n ->
+    if n < 2 then []
+    else
+        let f = smallestFactor n 2
+        f :: primeFactors (n / f)
+
+main : Effect ()
+main -> 
+    let n = 120
+        factors = primeFactors n
+    in
+    Console.print (show factors)

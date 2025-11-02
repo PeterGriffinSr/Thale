@@ -11,11 +11,10 @@
 ## Getting Started
 Create a new Thale script with the `.thl` extension. Here's a basic example:
 ```thl
-use std.io
+effect Console { print : String -> () }
 
-val main() {
-    io.println("Hello, World!")
-}
+main : Effect ()
+main -> Console.print "Hello, world!"
 ```
 To build and run your script:
 `thale run Main.thl`

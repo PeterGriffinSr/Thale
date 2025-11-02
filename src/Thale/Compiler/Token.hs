@@ -12,18 +12,16 @@ data LocatedToken = LocatedToken
   deriving (Show, Eq)
 
 data Token
-  = TokenFloat Double
+  = TokenInt Int
+  | TokenFloat Double
   | TokenChar Char
   | TokenString String
   | TokenIdentifier String
   | TokenBool Bool
-  | TokenVal
-  | TokenIn
+  | TokenLet
   | TokenType
-  | TokenUse
   | TokenMatch
   | TokenWith
-  | TokenFun
   | TokenFloatType
   | TokenCharType
   | TokenUnitType

@@ -11,7 +11,6 @@ import Control.Applicative ((<|>))
 import Data.IORef (readIORef)
 import Data.List (find, isSuffixOf)
 import GHC.IO (unsafePerformIO)
-import System.Exit (exitFailure)
 import System.IO (hFlush, hPutStr, hPutStrLn, stderr)
 import Thale.Compiler.Token
   ( LocatedToken (..),
@@ -19,7 +18,7 @@ import Thale.Compiler.Token
     tokenToString,
   )
 import Thale.Util.Color (Color (..), colorize, enableVirtualTerminal)
-import Thale.Util.Source (sourceRef)
+import Thale.Util.Source (currentFileRef, sourceRef)
 
 data LexError = LexError
   { lexErrorMessage :: String,
@@ -33,6 +32,7 @@ printLexError :: LexError -> IO ()
 printLexError (LexError msg line col snippet) = do
   enableVirtualTerminal
   src <- readIORef sourceRef
+  filename <- readIORef currentFileRef
   let srcLines = lines src
       offendingLine =
         if line > 0 && line <= length srcLines
@@ -41,17 +41,18 @@ printLexError (LexError msg line col snippet) = do
       pointer = replicate (max 0 (col - 1)) ' ' ++ "^"
 
   hPutStrLn stderr $ colorize Red "error:" ++ " " ++ msg
-  hPutStrLn stderr $
-    colorize Cyan (" --> line " ++ show line ++ ", column " ++ show col)
+  hPutStrLn stderr $ colorize Cyan (" --> " ++ filename ++ " (line " ++ show line ++ ", column " ++ show col ++ ")")
   hPutStrLn stderr "  |"
   hPutStrLn stderr $ colorize Reset (show line ++ " | " ++ offendingLine)
   hPutStrLn stderr $ colorize Yellow ("  | " ++ pointer)
   hFlush stderr
+  pure ()
 
 printParseError :: [LocatedToken] -> a
 printParseError toks = unsafePerformIO $ do
   enableVirtualTerminal
   source <- readIORef sourceRef
+  filename <- readIORef currentFileRef
   let srcLines = lines source
       maxLookback = 5
       operators =
@@ -116,7 +117,7 @@ printParseError toks = unsafePerformIO $ do
             case findUnmatchedOpening toks of
               Just t -> t
               Nothing -> case toks of
-                [] -> LocatedToken 0 0 TokenEof
+                [] -> LocatedToken {locLine = 0, locCol = 0, locTok = TokenEof}
                 (t : _) -> t
         where
           isClosing (LocatedToken _ _ t) = t `elem` [TokenRBracket, TokenRBrace, TokenRParen]
@@ -175,13 +176,14 @@ printParseError toks = unsafePerformIO $ do
 
   hPutStr stderr $ colorize Red "error:"
   hPutStrLn stderr $ colorize Reset (" Unexpected token: \"" ++ tokStr ++ "\"")
-  hPutStrLn stderr $ colorize Cyan (" --> line " ++ show lineNum ++ ", column " ++ show colNum)
+  hPutStrLn stderr $
+    colorize Cyan (" --> " ++ filename ++ " (line " ++ show lineNum ++ ", column " ++ show colNum ++ ")")
   hPutStrLn stderr $ colorize Reset (pad ++ " |")
   hPutStrLn stderr $ colorize Reset (show lineNum ++ " | " ++ displayLine)
   hPutStrLn stderr $ colorize Yellow (pad ++ " | " ++ displayPointer)
   hPutStrLn stderr $ colorize Magenta ("note: " ++ hint)
   hFlush stderr
-  exitFailure
+  pure undefined
 
 hintFor :: Token -> String
 hintFor = \case

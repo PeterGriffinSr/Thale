@@ -1,6 +1,8 @@
 module Thale.Util.Source
   ( sourceRef,
     setSource,
+    setCurrentFile,
+    currentFileRef,
   )
 where
 
@@ -13,3 +15,10 @@ sourceRef = unsafePerformIO (newIORef "")
 
 setSource :: String -> IO ()
 setSource = writeIORef sourceRef
+
+{-# NOINLINE currentFileRef #-}
+currentFileRef :: IORef String
+currentFileRef = unsafePerformIO (newIORef "<unknown>")
+
+setCurrentFile :: String -> IO ()
+setCurrentFile = writeIORef currentFileRef

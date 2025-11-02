@@ -2,7 +2,7 @@
 
 module Thale.Cli.Entry (runCli) where
 
-import qualified Data.Version as V
+import Data.Version (showVersion)
 import Options.Applicative (execParser, fullDesc, helper, info, (<**>))
 import Paths_thale (version)
 import Thale.Cli.Options (Command (..))
@@ -24,7 +24,7 @@ dispatch = \case
   Check f -> runCheck f
   Format f -> runFormat f
   Repl -> runRepl
-  Version -> putStrLn $ "Thale Version " <> V.showVersion version
+  Version -> putStrLn $ "Thale Version " <> showVersion version
   Verify -> runVerify
   New f -> runNew f
   NewInteractive -> runNewInteractive
